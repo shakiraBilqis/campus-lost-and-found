@@ -2233,6 +2233,50 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mobLogoutBtn = $("#mob-logout-btn");
   if (mobLogoutBtn) mobLogoutBtn.addEventListener("click", logout);
 
+  const sidebarToggleBtn = $("#sidebar-toggle-btn");
+  const mobileOpenBtn = $("#mobile-sidebar-open-btn");
+  const sidebarBackdrop = $("#sidebar-backdrop");
+  const appLayout = $("#app");
+
+  function closeMobileSidebar() {
+    if (appLayout) appLayout.classList.remove("mobile-sidebar-open");
+    if (sidebarBackdrop) sidebarBackdrop.hidden = true;
+  }
+
+  function openMobileSidebar() {
+    if (appLayout) appLayout.classList.add("mobile-sidebar-open");
+    if (sidebarBackdrop) sidebarBackdrop.hidden = false;
+  }
+
+  if (appLayout && localStorage.getItem("lf_sidebar_collapsed") === "true") {
+    appLayout.classList.add("sidebar-collapsed");
+    if (sidebarToggleBtn) sidebarToggleBtn.setAttribute("aria-expanded", "false");
+  }
+
+  if (sidebarToggleBtn && appLayout) {
+    sidebarToggleBtn.addEventListener("click", () => {
+      if (window.innerWidth <= 768) {
+        closeMobileSidebar();
+      } else {
+        const isCollapsed = appLayout.classList.toggle("sidebar-collapsed");
+        localStorage.setItem("lf_sidebar_collapsed", String(isCollapsed));
+        sidebarToggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+      }
+    });
+  }
+
+  if (mobileOpenBtn) {
+    mobileOpenBtn.addEventListener("click", openMobileSidebar);
+  }
+  if (sidebarBackdrop) {
+    sidebarBackdrop.addEventListener("click", closeMobileSidebar);
+  }
+  $$(".nav-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      if (window.innerWidth <= 768) closeMobileSidebar();
+    });
+  });
+
   const quickReportBtn = $("#btn-quick-report");
   if (quickReportBtn) {
     quickReportBtn.addEventListener("click", openReportModal);

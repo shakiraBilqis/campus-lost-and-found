@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=7">
+  <link rel="stylesheet" href="css/style.css?v=13">
   <script>
     (function () {
       var saved = localStorage.getItem("lf_theme");
@@ -82,12 +82,22 @@
 
   <!-- ==================== DASHBOARD UTAMA ==================== -->
   <div id="app" class="app-layout" hidden>
+    <!-- Backdrop Sidebar Mobile -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
 
-    <!-- Sidebar Desktop -->
+    <!-- Sidebar (Desktop & Slide-out Mobile) -->
     <aside class="sidebar">
       <div class="sidebar-top">
-        <div class="brand">
-          Lost<span class="brand-accent">&amp;</span>Found
+        <div class="sidebar-header">
+          <div class="brand">
+            Lost<span class="brand-accent">&amp;</span>Found
+          </div>
+          <button type="button" id="sidebar-toggle-btn" class="sidebar-toggle-btn" aria-label="Buka atau tutup sidebar" aria-expanded="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 3v18"/>
+            </svg>
+          </button>
         </div>
         <nav class="nav-menu">
           <a href="#beranda" class="nav-item active" data-page="beranda">
@@ -112,35 +122,19 @@
       </div>
     </aside>
 
-    <!-- Header Mobile (Tampil di layar <= 768px) -->
-    <header class="mobile-bar">
-      <div class="brand">
-        Lost<span class="brand-accent">&amp;</span>Found
-      </div>
-      <nav class="mobile-nav">
-        <a href="#beranda" class="mob-item active" data-page="beranda" data-i18n="nav_home">Beranda</a>
-        <a href="#aktivitas" class="mob-item" data-page="aktivitas">
-          <span data-i18n="nav_activity_short">Aktivitas</span>
-          <span class="nav-badge activity-notif-badge" hidden>0</span>
-        </a>
-        <a href="#admin" class="mob-item admin-only" data-page="admin" hidden data-i18n="nav_admin_short">Admin</a>
-        <button type="button" class="lang-toggle lang-toggle-mobile" data-lang-toggle aria-label="Ganti bahasa">
-          <span class="lang-opt" data-lang-opt="id">IND</span>
-          <span class="lang-sep">/</span>
-          <span class="lang-opt" data-lang-opt="en">ENG</span>
-        </button>
-        <button type="button" class="theme-switch" data-theme-toggle role="switch" aria-checked="true" aria-label="Mode gelap">
-          <span class="theme-switch-icon"></span>
-          <span class="theme-switch-track"><span class="theme-switch-thumb"></span></span>
-        </button>
-        <button type="button" id="mob-logout-btn" class="mob-logout" data-i18n="nav_logout">Keluar</button>
-      </nav>
-    </header>
-
     <!-- Konten Utama -->
     <main class="main-content">
-      <!-- Navbar Atas Desktop -->
+      <!-- Navbar Atas -->
       <header class="top-navbar">
+        <div class="top-navbar-left">
+          <button type="button" id="mobile-sidebar-open-btn" class="mobile-menu-btn" aria-label="Buka sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M9 3v18"/>
+            </svg>
+          </button>
+          <span class="mobile-brand-inline">Lost<span class="brand-accent">&amp;</span>Found</span>
+        </div>
         <div class="top-navbar-right">
           <button type="button" class="lang-toggle" data-lang-toggle aria-label="Ganti bahasa">
             <span class="lang-opt" data-lang-opt="id">IND</span>
@@ -318,8 +312,8 @@
     </main>
   </div>
 
-  <script src="js/config.js?v=7"></script>
-  <script src="js/api.js?v=7"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/config.js?v=11"></script>
+  <script src="js/api.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>
