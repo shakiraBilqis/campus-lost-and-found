@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Lost & Found</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ============ HALAMAN LOGIN ============ -->
+  <section id="login-page" class="login">
+    <div class="login-hero">
+      <div class="brand brand-light">
+        <span class="brand-mark"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+        Lost &amp; Found
+      </div>
+      <div class="hero-copy">
+        <p class="eyebrow">Telkom University</p>
+        <h1>Barang hilang di kampus? Kita bantu cari jalan pulangnya.</h1>
+        <p class="hero-sub">Laporkan barang yang hilang atau kamu temukan, cari berdasarkan lokasi dan kategori, lalu ajukan klaim yang diverifikasi admin.</p>
+      </div>
+      <ol class="steps">
+        <li><b>1</b><span>Lapor barang hilang atau temuan</span></li>
+        <li><b>2</b><span>Pemilik ajukan klaim dengan ciri khas barang</span></li>
+        <li><b>3</b><span>Admin verifikasi, barang kembali</span></li>
+      </ol>
+    </div>
+
+    <div class="login-panel">
+      <div class="login-box">
+        <h2>Masuk</h2>
+        <p class="muted">Pakai akun Google kampus kamu (<span id="domain-hint">@student.telkomuniversity.ac.id</span>).</p>
+
+        <div id="google-area" hidden>
+          <div id="gsi-btn"></div>
+        </div>
+
+        <div id="demo-area" hidden>
+          <div class="notice">
+            <b>Mode demo.</b> Login Google belum diaktifkan, jadi cukup ketik email kampus. Lihat README untuk mengaktifkan Google Sign-In.
+          </div>
+          <form id="login-form" class="stack">
+            <label class="field">Email kampus
+              <input type="email" name="email" required placeholder="nama@student.telkomuniversity.ac.id" autocomplete="email">
+            </label>
+            <button class="btn primary lg" type="submit">Masuk</button>
+          </form>
+          <p class="muted small">Akun contoh: <code>budi@student.telkomuniversity.ac.id</code> · admin: <code>admin.lostfound@telkomuniversity.ac.id</code></p>
+        </div>
+
+        <p class="muted small fine">Hanya email dengan domain kampus yang bisa masuk. Akun baru otomatis dibuat saat pertama kali login.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ APLIKASI ============ -->
+  <div id="app" hidden>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="brand-mark"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+          Lost &amp; Found
+        </div>
+        <nav class="tabs">
+          <button data-page="home" class="nav active">Beranda</button>
+          <button data-page="report" class="nav">Lapor Barang</button>
+          <button data-page="activity" class="nav">Aktivitas Saya</button>
+          <button data-page="admin" class="nav admin-only">Admin</button>
+        </nav>
+        <div class="who">
+          <button id="profile-btn" class="who-btn" title="Profil saya">
+            <span id="who-avatar" class="avatar"></span>
+            <span class="who-text"><b id="who-name"></b><small id="who-role"></small></span>
+          </button>
+          <button id="logout" class="btn ghost small">Keluar</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Beranda: cari & lihat barang -->
+      <section id="page-home" class="page">
+        <div class="page-head">
+          <div>
+            <h1 id="greeting">Halo!</h1>
+            <p class="muted">Cek barang yang dilaporkan hilang atau ditemukan di sekitar kampus.</p>
+          </div>
+          <button class="btn primary" data-goto="report">+ Lapor barang</button>
+        </div>
+
+        <div id="stats" class="stats"></div>
+
+        <form id="filter-form" class="toolbar">
+          <div class="search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input name="q" placeholder="Cari nama atau ciri barang..." autocomplete="off">
+          </div>
+          <div class="seg">
+            <label><input type="radio" name="tipe" value="" checked><span>Semua</span></label>
+            <label><input type="radio" name="tipe" value="hilang"><span>Hilang</span></label>
+            <label><input type="radio" name="tipe" value="ditemukan"><span>Ditemukan</span></label>
+          </div>
+          <div class="filter-row">
+            <select name="kategori" class="kategori-select"><option value="">Semua kategori</option></select>
+            <input name="lokasi" placeholder="Lokasi">
+            <input name="tanggal" type="date">
+            <button class="btn ghost" type="reset">Reset</button>
+          </div>
+        </form>
+
+        <p id="result-count" class="muted small"></p>
+        <div id="item-grid" class="grid"></div>
+      </section>
+
+      <!-- Lapor / edit barang -->
+      <section id="page-report" class="page" hidden>
+        <div class="page-head">
+          <div>
+            <h1 id="report-title">Lapor Barang</h1>
+            <p class="muted">Makin detail deskripsinya, makin cepat barangnya ketemu.</p>
+          </div>
+        </div>
+        <div class="card form-card">
+          <form id="item-form" class="stack">
+            <input type="hidden" name="edit_id">
+            <div class="type-pick">
+              <label>
+                <input type="radio" name="tipe" value="hilang" checked>
+                <span><b>Barang hilang</b><small>Saya kehilangan barang</small></span>
+              </label>
+              <label>
+                <input type="radio" name="tipe" value="ditemukan">
+                <span><b>Barang ditemukan</b><small>Saya menemukan barang orang</small></span>
+              </label>
+            </div>
+            <label class="field">Nama barang <input name="judul" required placeholder="mis. Dompet kulit coklat"></label>
+            <div class="two">
+              <label class="field">Kategori <select name="kategori" class="kategori-select" required></select></label>
+              <label class="field">Tanggal <input name="tanggal" type="date" required></label>
+            </div>
+            <label class="field">Lokasi <input name="lokasi" required placeholder="mis. Gedung TULT Lt. 5"></label>
+            <label class="field">Deskripsi <textarea name="deskripsi" rows="4" placeholder="Warna, merek, isi, atau ciri khas lainnya"></textarea></label>
+            <label class="field">Link foto <span class="opt">opsional</span> <input name="url_foto" type="url" placeholder="https://..."></label>
+            <div class="row end">
+              <button class="btn ghost" type="button" id="cancel-edit" hidden>Batal edit</button>
+              <button class="btn primary lg" type="submit">Simpan laporan</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Aktivitas saya -->
+      <section id="page-activity" class="page" hidden>
+        <div class="page-head">
+          <div>
+            <h1>Aktivitas Saya</h1>
+            <p class="muted">Laporan yang kamu buat dan klaim yang kamu ajukan.</p>
+          </div>
+        </div>
+        <h2 class="section-title">Laporan saya</h2>
+        <div id="my-items" class="grid"></div>
+        <h2 class="section-title">Klaim saya</h2>
+        <div class="card table-wrap">
+          <table class="table">
+            <thead><tr><th>Barang</th><th>Bukti ciri</th><th>Tanggal</th><th>Status</th><th></th></tr></thead>
+            <tbody id="my-claims"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Admin -->
+      <section id="page-admin" class="page" hidden>
+        <div class="page-head">
+          <div>
+            <h1>Panel Admin</h1>
+            <p class="muted">Verifikasi klaim dan kelola pengguna.</p>
+          </div>
+        </div>
+        <h2 class="section-title">Verifikasi klaim <span id="pending-count" class="pill"></span></h2>
+        <div class="card table-wrap">
+          <table class="table">
+            <thead><tr><th>Barang</th><th>Pengklaim</th><th>Bukti ciri</th><th>Tanggal</th><th>Status</th><th></th></tr></thead>
+            <tbody id="admin-claims"></tbody>
+          </table>
+        </div>
+
+        <h2 class="section-title">Kelola pengguna</h2>
+        <form id="user-form" class="card user-form">
+          <input type="hidden" name="edit_id">
+          <input name="nama" required placeholder="Nama">
+          <input name="nim" placeholder="NIM">
+          <input name="email" type="email" required placeholder="Email kampus">
+          <input name="no_hp" placeholder="No. HP">
+          <select name="role"><option value="mahasiswa">mahasiswa</option><option value="admin">admin</option></select>
+          <button class="btn primary" type="submit">Simpan</button>
+          <button class="btn ghost" type="reset">Reset</button>
+        </form>
+        <div class="card table-wrap">
+          <table class="table">
+            <thead><tr><th>Nama</th><th>NIM</th><th>Email</th><th>No. HP</th><th>Role</th><th></th></tr></thead>
+            <tbody id="admin-users"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal detail barang + form klaim -->
+  <dialog id="detail-dialog" class="modal">
+    <button class="modal-x" data-close aria-label="Tutup">&times;</button>
+    <div id="detail-body"></div>
+  </dialog>
+
+  <!-- Modal profil -->
+  <dialog id="profile-dialog" class="modal">
+    <button class="modal-x" data-close aria-label="Tutup">&times;</button>
+    <h2>Profil saya</h2>
+    <p class="muted small" id="profile-hint">Lengkapi NIM dan nomor HP supaya pemilik/penemu barang bisa menghubungi kamu.</p>
+    <form id="profile-form" class="stack">
+      <label class="field">Nama <input name="nama" required></label>
+      <label class="field">Email <input name="email" disabled></label>
+      <div class="two">
+        <label class="field">NIM <input name="nim" placeholder="10301240xx"></label>
+        <label class="field">No. HP / WhatsApp <input name="no_hp" placeholder="08xxxxxxxxxx"></label>
+      </div>
+      <div class="row end"><button class="btn primary" type="submit">Simpan profil</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" hidden></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
