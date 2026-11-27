@@ -94,6 +94,14 @@ const I18N = {
     claim_no_loc: "Pusat Pos Satpam Telkom University (Gerbang Utama)",
     toast_published_found:
       "Laporan dipublikasikan! Harap segera bawa barang temuan ke Pusat Pos Satpam Telkom University (Gerbang Utama).",
+    form_found_notice:
+      "Barang temuan wajib segera diserahkan ke Pusat Pos Satpam Telkom University (Gerbang Utama) setelah laporan dipublikasikan.",
+    found_success_title: "Laporan Berhasil Dipublikasikan",
+    found_success_sub: "Terima kasih telah melaporkan barang temuan di kampus.",
+    found_success_loc_label: "Arahan Penyetoran Barang:",
+    found_success_loc_val:
+      "Harap segera bawa dan serahkan barang temuan ini ke Pusat Pos Satpam Telkom University (Gerbang Utama).",
+    btn_understood: "Saya Mengerti",
     approve_modal_title: "Setujui Klaim & Lokasi Pengambilan",
     approve_modal_sub:
       "Masukkan deskripsi pos satpam tempat mahasiswa dapat mengambil barang:",
@@ -293,6 +301,14 @@ const I18N = {
     claim_no_loc: "Telkom University Central Security Post (Main Gate)",
     toast_published_found:
       "Report published! Please bring the found item to the Telkom University Central Security Post (Main Gate).",
+    form_found_notice:
+      "Found items must be handed over to the Telkom University Central Security Post (Main Gate) after publishing.",
+    found_success_title: "Report Published Successfully",
+    found_success_sub: "Thank you for reporting a found item on campus.",
+    found_success_loc_label: "Item Drop-off Instruction:",
+    found_success_loc_val:
+      "Please bring and hand over this found item to the Telkom University Central Security Post (Main Gate).",
+    btn_understood: "Got It",
     approve_modal_title: "Approve Claim & Pickup Location",
     approve_modal_sub:
       "Enter the security post location where the student can pick up the item:",
@@ -1082,6 +1098,10 @@ function openReportModal() {
         <input type="hidden" id="modal-report-url-foto" value="">
       </div>
 
+      <div id="modal-found-notice" class="pickup-highlight-box" style="margin-top: 0.75rem; margin-bottom: 0; font-size: 0.85rem;">
+        ${escapeHtml(t("form_found_notice"))}
+      </div>
+
       <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">${escapeHtml(t("btn_cancel"))}</button>
         <button type="submit" class="btn btn-primary">${escapeHtml(t("btn_publish"))}</button>
@@ -1103,6 +1123,10 @@ function openReportModal() {
           btn.dataset.val === "found"
             ? t("report_photo_required_label")
             : t("report_photo_optional_label");
+      }
+      const foundNotice = $("#modal-found-notice");
+      if (foundNotice) {
+        foundNotice.hidden = btn.dataset.val !== "found";
       }
     });
   });
@@ -1153,17 +1177,43 @@ function openReportModal() {
     };
 
     try {
-      await api.createItem(payload);
-      showToast(
-        tipeVal === "found" ? t("toast_published_found") : t("toast_published")
-      );
+      const created = await api.createItem(payload);
       closeModal();
       loadItems();
       refreshActivityNotifications();
+      if (tipeVal === "found") {
+        openFoundSuccessModal(created);
+      } else {
+        showToast(t("toast_published"));
+      }
     } catch (err) {
       showToast(err.message, true);
     }
   });
+}
+
+function openFoundSuccessModal(item) {
+  const modalHtml = `
+    <div class="modal-header">
+      <h2 class="modal-title">${escapeHtml(t("found_success_title"))}</h2>
+      <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size: 0.92rem; color: var(--text-muted); margin-bottom: 1rem;">
+      ${escapeHtml(t("found_success_sub"))} <strong>(${escapeHtml(item ? item.judul : "")})</strong>
+    </p>
+    <div class="pickup-highlight-box">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-green); margin-bottom: 0.3rem;">
+        ${escapeHtml(t("found_success_loc_label"))}
+      </div>
+      <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-strong); line-height: 1.5;">
+        ${escapeHtml(t("found_success_loc_val"))}
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; margin-top: 1rem;">
+      <button type="button" class="btn btn-primary" onclick="closeModal()">${escapeHtml(t("btn_understood"))}</button>
+    </div>
+  `;
+  openModal(modalHtml);
 }
 
 // ---------------------------------------------------------------- lapor barang form (halaman #lapor)
