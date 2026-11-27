@@ -1329,6 +1329,13 @@ function updateNotifBadges(claims, items = []) {
         jumpBtn.addEventListener("click", () => {
           const tabBtn = $(`#page-aktivitas .subtab-btn[data-subtab="${targetTab}"]`);
           if (tabBtn) tabBtn.click();
+          if (targetTab === "my-items") {
+            const firstUnread = dropoffItems.find((i) => !seenDropoffs.includes(i.id));
+            if (firstUnread) openDropoffDetailModal(firstUnread.id);
+          } else {
+            const firstUnreadClaim = approvedClaims.find((c) => !seenClaims.includes(c.id));
+            if (firstUnreadClaim) openClaimDetailModal(firstUnreadClaim.id);
+          }
         });
       }
     } else {
