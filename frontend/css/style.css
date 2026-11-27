@@ -150,54 +150,121 @@ textarea {
 }
 
 /* ==========================================================================
-   Theme Toggle & Topbar
+   Top Navbar, Language Toggle (ENG/IND) & Theme On/Off Switch
    ========================================================================== */
 
-.desktop-topbar {
+.top-navbar {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-line);
+}
+
+.top-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
 .login-topbar {
   position: absolute;
   top: 1.25rem;
   right: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
 }
 
-.theme-toggle {
+/* Tombol Bahasa ENG / IND */
+.lang-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-line);
+  background-color: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.lang-toggle:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.lang-opt {
+  color: var(--text-dim);
+  transition: color 0.15s;
+}
+
+.lang-opt.active {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.lang-sep {
+  color: var(--border-line);
+}
+
+/* Tombol On/Off Mode Gelap & Terang */
+.theme-switch {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.32rem 0.55rem;
   border-radius: var(--radius);
   border: 1px solid var(--border-line);
   background-color: var(--bg-surface);
   color: var(--text-muted);
-  font-size: 0.82rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.theme-toggle:hover {
+.theme-switch:hover {
   background-color: var(--bg-surface-hover);
   color: var(--text-strong);
 }
 
-.theme-toggle svg {
+.theme-switch-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.theme-switch-icon svg {
   width: 15px;
   height: 15px;
-  flex-shrink: 0;
 }
 
-.theme-toggle-icon {
-  padding: 0.4rem 0.5rem;
+.theme-switch-track {
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background-color: var(--border-line);
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.15s;
 }
 
-.theme-toggle-icon .theme-label {
-  display: none;
+.theme-switch-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transition: transform 0.15s;
+}
+
+.theme-switch[aria-checked="true"] .theme-switch-track {
+  background-color: var(--color-primary);
+}
+
+.theme-switch[aria-checked="true"] .theme-switch-thumb {
+  transform: translateX(14px);
 }
 
 /* ==========================================================================
@@ -438,12 +505,69 @@ textarea {
 .nav-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0.6rem 0.85rem;
   border-radius: var(--radius);
   font-size: 0.9rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.85);
   transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #c8102e;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-left: 0.4rem;
+}
+
+.nav-item.active .nav-badge,
+.mob-item.active .nav-badge {
+  background-color: #c8102e;
+  color: #ffffff;
+}
+
+.notif-banner {
+  background-color: rgba(52, 211, 153, 0.12);
+  border: 1px solid var(--color-green);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.88rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.claim-approved-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius);
+  background-color: rgba(52, 211, 153, 0.14);
+  color: var(--color-green);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pickup-highlight-box {
+  background-color: rgba(52, 211, 153, 0.12);
+  border: 1px solid var(--color-green);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
 }
 
 .nav-item:hover {
@@ -861,6 +985,42 @@ textarea {
   margin-bottom: 0.6rem;
 }
 
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-strong);
+  line-height: 1.15;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .admin-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border-line);
@@ -1159,7 +1319,7 @@ textarea {
   }
 
   .sidebar,
-  .desktop-topbar {
+  .top-navbar {
     display: none;
   }
 
@@ -1219,15 +1379,28 @@ textarea {
     color: #ffffff;
   }
 
-  .mobile-bar .theme-toggle {
+  .mobile-bar .lang-toggle,
+  .mobile-bar .theme-switch {
     background-color: rgba(255, 255, 255, 0.14);
     border-color: rgba(255, 255, 255, 0.25);
     color: #ffffff;
   }
 
-  .mobile-bar .theme-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.24);
+  .mobile-bar .lang-opt {
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .mobile-bar .lang-opt.active {
     color: #ffffff;
+  }
+
+  .mobile-bar .lang-sep {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .mobile-bar .theme-switch:hover,
+  .mobile-bar .lang-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.24);
   }
 
   .main-content {

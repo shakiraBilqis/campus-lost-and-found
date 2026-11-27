@@ -101,6 +101,10 @@ claims = [
         "bukti_ciri": "Kabelnya saya lakban hitam di dekat colokan karena pernah sobek.",
         "status": "pending",  # pending, approved, rejected
         "tanggal_klaim": "2026-11-23",
+        "tanggal_ambil": "2026-11-24",
+        "jam_ambil": "13:00",
+        "lokasi_ambil": "",
+        "bukti_file": "",
     },
     {
         "id": 2,
@@ -109,6 +113,10 @@ claims = [
         "bukti_ciri": "Ada goresan nama 'RZ' di bagian bawah botol.",
         "status": "approved",
         "tanggal_klaim": "2026-11-19",
+        "tanggal_ambil": "2026-11-20",
+        "jam_ambil": "10:00",
+        "lokasi_ambil": "Pos Satpam Gerbang Utama",
+        "bukti_file": "",
     },
 ]
 

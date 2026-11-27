@@ -88,9 +88,10 @@ class TestLostAndFoundAPI(unittest.TestCase):
         res_self = self.client.post('/api/claims', json={"id_barang": 3, "bukti_ciri": "punya saya"}, headers={'X-User-Id': '3'})
         self.assertEqual(res_self.status_code, 400)
 
-        # Another user tries to claim while already claimed -> should fail
-        res_double = self.client.post('/api/claims', json={"id_barang": 3, "bukti_ciri": "KTM saya"}, headers={'X-User-Id': '4'})
-        self.assertEqual(res_double.status_code, 400)
+        # Another user can also submit a competing claim for comparison
+        res_second = self.client.post('/api/claims', json={"id_barang": 3, "bukti_ciri": "KTM saya warna merah"}, headers={'X-User-Id': '4'})
+        self.assertEqual(res_second.status_code, 201)
+        second_claim_id = json.loads(res_second.data)['id']
 
         # Non-admin tries to approve claim -> 403
         res_approve_unauth = self.client.put(f'/api/claims/{claim_id}', json={"status": "approved"}, headers={'X-User-Id': '2'})

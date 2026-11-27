@@ -37,7 +37,9 @@ PUBLIC_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "public"
 )
 UPLOAD_DIR = os.path.join(PUBLIC_DIR, "uploads")
+CLAIM_UPLOAD_DIR = os.path.join(PUBLIC_DIR, "claims")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(CLAIM_UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_DOMAINS = [
     "student.telkomuniversity.ac.id",
@@ -82,6 +84,31 @@ def save_uploaded_photo(url_foto):
     with open(filepath, "wb") as f:
         f.write(img_bytes)
     return f"public/uploads/{filename}"
+
+
+def save_claim_proof(data_url):
+    """Simpan file bukti klaim (gambar atau PDF) ke folder public/claims."""
+    if not data_url or not isinstance(data_url, str):
+        return ""
+    match = re.match(
+        r"^data:(?:image/(png|jpeg|jpg|webp)|application/(pdf));base64,(.+)$",
+        data_url.strip(),
+        re.IGNORECASE,
+    )
+    if not match:
+        return data_url.strip() if data_url.strip().startswith("public/") else ""
+    ext = (match.group(1) or match.group(2)).lower()
+    if ext == "jpeg":
+        ext = "jpg"
+    try:
+        file_bytes = base64.b64decode(match.group(3))
+    except Exception:
+        return ""
+    filename = f"claim_{uuid.uuid4().hex[:12]}.{ext}"
+    filepath = os.path.join(CLAIM_UPLOAD_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(file_bytes)
+    return f"public/claims/{filename}"
 
 
 def get_current_user():
@@ -628,9 +655,6 @@ def create_claim():
     if item["id_pelapor"] == pengklaim["id"]:
         return error("Anda tidak boleh mengklaim barang yang Anda laporkan sendiri", 400)
 
-    if item["status"] in ("claimed", "diklaim"):
-        return error("Barang ini sedang dalam proses klaim oleh pengguna lain", 400)
-
     if item["status"] in ("returned", "dikembalikan"):
         return error("Barang ini sudah dikembalikan kepada pemiliknya", 400)
 
@@ -643,6 +667,10 @@ def create_claim():
     ):
         return error("Anda sudah memiliki pengajuan klaim aktif untuk barang ini", 400)
 
+    tanggal_ambil = str(body.get("tanggal_ambil", "")).strip()
+    jam_ambil = str(body.get("jam_ambil", "")).strip()
+    bukti_file = save_claim_proof(body.get("bukti_file", ""))
+
     claim = {
         "id": next_id(data.claims),
         "id_barang": item["id"],
@@ -650,6 +678,10 @@ def create_claim():
         "bukti_ciri": bukti_ciri,
         "status": "pending",
         "tanggal_klaim": date.today().isoformat(),
+        "tanggal_ambil": tanggal_ambil,
+        "jam_ambil": jam_ambil,
+        "lokasi_ambil": "",
+        "bukti_file": bukti_file,
     }
     data.claims.append(claim)
 
@@ -690,6 +722,9 @@ def update_or_verify_claim(claim_id):
         item = find(data.items, claim["id_barang"])
 
         if new_status == "approved":
+            lokasi_ambil = str(body.get("lokasi_ambil", "")).strip()
+            if lokasi_ambil:
+                claim["lokasi_ambil"] = lokasi_ambil
             # Barang menjadi returned
             if item:
                 item["status"] = "returned"
@@ -746,6 +781,11 @@ def delete_claim(claim_id):
 @app.get("/")
 def serve_index():
     return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@app.get("/favicon.ico")
+def serve_favicon():
+    return "", 204
 
 
 @app.get("/public/<path:path>")

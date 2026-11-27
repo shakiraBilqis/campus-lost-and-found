@@ -58,7 +58,14 @@ const api = {
   getItem: (id) => request("GET", `/api/items/${id}`),
   createItem: (itemData) => request("POST", "/api/items", itemData),
   updateItem: (id, itemData) => request("PUT", `/api/items/${id}`, itemData),
-  deleteItem: (id) => request("DELETE", `/api/items/${id}`),
+  deleteItem: (id) => {
+    let uid = "";
+    try {
+      const u = JSON.parse(localStorage.getItem("lf_user") || "null");
+      if (u && u.id) uid = `?id_user=${u.id}`;
+    } catch (e) {}
+    return request("DELETE", `/api/items/${id}${uid}`);
+  },
 
   // Claim (Klaim) CRUD
   listClaims: (filters = {}) => {
@@ -75,5 +82,6 @@ const api = {
   createClaim: (claimData) => request("POST", "/api/claims", claimData),
   updateClaim: (id, claimData) => request("PUT", `/api/claims/${id}`, claimData),
   deleteClaim: (id) => request("DELETE", `/api/claims/${id}`),
-  verifyClaim: (id, status) => request("PUT", `/api/claims/${id}`, { status }),
+  verifyClaim: (id, status, lokasiAmbil = "") =>
+    request("PUT", `/api/claims/${id}`, { status, lokasi_ambil: lokasiAmbil }),
 };
