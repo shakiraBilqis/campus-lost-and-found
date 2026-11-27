@@ -1,302 +1,400 @@
 """
-Backend REST API Campus Lost & Found (Python Flask).
-Entitas: User, Barang (items), Klaim (claims). Data hardcoded di data.py (tanpa database).
-
-Jalankan:  python app.py   ->  http://localhost:5000
+Backend REST API Lost & Found Telkom University (Python Flask).
+Arsitektur tanpa database: data tersimpan di memori (backend/data.py).
+Mendukung otorisasi sederhana via header X-User-Id, CORS, limit payload, dan health check.
 """
+
+from datetime import date
 import json
 import os
-import urllib.error
-import urllib.parse
-import urllib.request
-from datetime import date
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
 import data
 
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend")
-
+# ---------------------------------------------------------------- inisialisasi aplikasi
 app = Flask(__name__, static_folder=None)
-CORS(app)  # izinkan frontend dari origin lain memanggil API
+
+# Konfigurasi via environment variable
+PORT = int(os.environ.get("PORT", 5000))
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "*")
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # Maksimal payload 2 MB
+
+# Konfigurasi CORS
+if ALLOWED_ORIGIN == "*":
+    CORS(app)
+else:
+    CORS(app, origins=[ALLOWED_ORIGIN])
+
+FRONTEND_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "frontend"
+)
+
+ALLOWED_DOMAINS = [
+    "student.telkomuniversity.ac.id",
+    "telkomuniversity.ac.id",
+]
+ADMIN_EMAIL = "admin.lostfound@telkomuniversity.ac.id"
 
 
-# ---------------------------------------------------------------- helper
-def next_id(rows):
-    return max((r["id"] for r in rows), default=0) + 1
+# ---------------------------------------------------------------- helper & utilitas
+def next_id(collection):
+    return max((item["id"] for item in collection), default=0) + 1
 
 
-def find(rows, row_id):
-    return next((r for r in rows if r["id"] == row_id), None)
+def find(collection, item_id):
+    try:
+        target_id = int(item_id)
+    except (ValueError, TypeError):
+        return None
+    return next((item for item in collection if item["id"] == target_id), None)
 
 
-def error(msg, code=400):
-    return jsonify({"error": msg}), code
+def error(message, status_code=400):
+    return jsonify({"error": message}), status_code
 
 
-def missing_fields(body, fields):
-    return [f for f in fields if not str(body.get(f, "")).strip()]
+def get_current_user():
+    """Mengambil user aktif dari header X-User-Id (atau query/body id_user sebagai fallback)."""
+    user_id = request.headers.get("X-User-Id")
+    if not user_id:
+        user_id = request.args.get("id_user")
+    if not user_id and request.is_json:
+        user_id = (request.get_json(silent=True) or {}).get("id_user")
+    if user_id:
+        return find(data.users, user_id)
+    return None
 
 
 def item_with_relations(item):
-    """Gabungkan Barang dengan data User pelapor dan jumlah klaimnya."""
-    pelapor = find(data.users, item["id_pelapor"])
+    """Menggabungkan entitas Item dengan User pelapor dan jumlah klaim."""
+    pelapor = find(data.users, item.get("id_pelapor"))
+    claims_for_item = [
+        c for c in data.claims if c.get("id_barang") == item["id"]
+    ]
     return {
         **item,
-        "pelapor": {"id": pelapor["id"], "nama": pelapor["nama"], "no_hp": pelapor["no_hp"]} if pelapor else None,
-        "jumlah_klaim": sum(1 for c in data.claims if c["id_barang"] == item["id"]),
+        "pelapor": (
+            {
+                "id": pelapor["id"],
+                "nama": pelapor["nama"],
+                "nim": pelapor.get("nim", "-"),
+                "email": pelapor["email"],
+                "no_hp": pelapor.get("no_hp", ""),
+            }
+            if pelapor
+            else None
+        ),
+        "jumlah_klaim": len(claims_for_item),
     }
 
 
 def claim_with_relations(claim):
-    """Gabungkan Klaim dengan data Barang dan User pengklaim."""
-    barang = find(data.items, claim["id_barang"])
-    pengklaim = find(data.users, claim["id_pengklaim"])
+    """Menggabungkan entitas Claim dengan Item dan User pengklaim."""
+    item = find(data.items, claim.get("id_barang"))
+    pengklaim = find(data.users, claim.get("id_pengklaim"))
     return {
         **claim,
-        "barang": {"id": barang["id"], "judul": barang["judul"], "status": barang["status"]} if barang else None,
-        "pengklaim": {"id": pengklaim["id"], "nama": pengklaim["nama"], "nim": pengklaim["nim"]} if pengklaim else None,
+        "barang": (
+            {
+                "id": item["id"],
+                "judul": item["judul"],
+                "tipe": item["tipe"],
+                "status": item["status"],
+                "kategori": item["kategori"],
+                "lokasi": item["lokasi"],
+                "tanggal": item["tanggal"],
+                "url_foto": item.get("url_foto", ""),
+            }
+            if item
+            else None
+        ),
+        "pengklaim": (
+            {
+                "id": pengklaim["id"],
+                "nama": pengklaim["nama"],
+                "nim": pengklaim.get("nim", "-"),
+                "email": pengklaim["email"],
+                "no_hp": pengklaim.get("no_hp", ""),
+            }
+            if pengklaim
+            else None
+        ),
     }
 
 
 def refresh_item_status(item_id):
-    """Status barang mengikuti klaimnya: dikembalikan > diklaim > tersedia."""
+    """
+    Sinkronisasi status barang berdasarkan klaimnya:
+    - returned: jika ada klaim yang disetujui (approved)
+    - claimed: jika ada klaim yang menunggu (pending)
+    - open: jika tidak ada klaim aktif
+    """
     item = find(data.items, item_id)
     if not item:
         return
     statuses = [c["status"] for c in data.claims if c["id_barang"] == item_id]
-    if "disetujui" in statuses:
-        item["status"] = "dikembalikan"
-    elif "menunggu" in statuses:
-        item["status"] = "diklaim"
+    if "approved" in statuses or "disetujui" in statuses:
+        item["status"] = "returned"
+    elif "pending" in statuses or "menunggu" in statuses:
+        item["status"] = "claimed"
     else:
-        item["status"] = "tersedia"
+        item["status"] = "open"
 
 
-# ---------------------------------------------------------------- auth
-# Login hanya untuk akun Google kampus (Telkom University).
-#   GOOGLE_CLIENT_ID : OAuth Client ID dari Google Cloud Console. Jika kosong,
-#                      aplikasi berjalan di "mode demo" (login cukup ketik email kampus).
-#   ALLOWED_DOMAINS  : domain email yang boleh masuk, dipisah koma.
-#   ADMIN_EMAILS     : email yang otomatis jadi admin saat login, dipisah koma.
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "").strip()
-ALLOWED_DOMAINS = [d.strip().lower() for d in os.environ.get(
-    "ALLOWED_DOMAINS", "student.telkomuniversity.ac.id,telkomuniversity.ac.id").split(",") if d.strip()]
-ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
+# ---------------------------------------------------------------- health check
+@app.get("/health")
+def health():
+    return jsonify(
+        {
+            "status": "ok",
+            "service": "lost-and-found-api",
+            "timestamp": date.today().isoformat(),
+        }
+    ), 200
 
 
-def email_allowed(email):
-    return "@" in email and email.rsplit("@", 1)[1] in ALLOWED_DOMAINS
+# ---------------------------------------------------------------- autentikasi (login)
+@app.post("/api/login")
+def login():
+    """
+    Login mode demo dengan email kampus Telkom University.
+    Jika email belum ada, otomatis membuat akun mahasiswa baru.
+    """
+    body = request.get_json(silent=True) or {}
+    email = str(body.get("email", "")).strip().lower()
 
+    if not email or "@" not in email:
+        return error("Email wajib diisi dengan format yang benar", 400)
 
-def domain_error():
-    return error("Gunakan email kampus (" + ", ".join("@" + d for d in ALLOWED_DOMAINS) + ")", 403)
+    domain = email.rsplit("@", 1)[1]
+    if domain not in ALLOWED_DOMAINS:
+        return error(
+            f"Gunakan email kampus (@{' atau @'.join(ALLOWED_DOMAINS)})", 403
+        )
 
-
-def find_or_create_user(email, nama="", foto=""):
-    """Cari user berdasarkan email; buat akun mahasiswa baru jika belum ada."""
+    # Cari user atau buat baru
     user = next((u for u in data.users if u["email"].lower() == email), None)
     if not user:
+        is_admin = email == ADMIN_EMAIL
+        nama_otomatis = email.split("@")[0].replace(".", " ").title()
         user = {
             "id": next_id(data.users),
-            "nama": nama or email.split("@")[0].replace(".", " ").title(),
-            "nim": "-",
+            "nama": "Admin Lost & Found" if is_admin else nama_otomatis,
+            "nim": "-" if is_admin else f"10301{len(data.users)+1:04d}",
             "email": email,
             "no_hp": "",
-            "role": "mahasiswa",
-            "foto": foto,
+            "role": "admin" if is_admin else "mahasiswa",
+            "foto": "",
         }
         data.users.append(user)
-    elif foto:
-        user["foto"] = foto
-    if email in ADMIN_EMAILS:
-        user["role"] = "admin"
-    return user
 
-
-def verify_google_token(credential):
-    """Verifikasi ID token Google lewat endpoint tokeninfo; kembalikan payload atau None."""
-    url = "https://oauth2.googleapis.com/tokeninfo?" + urllib.parse.urlencode({"id_token": credential})
-    try:
-        with urllib.request.urlopen(url, timeout=10) as res:
-            info = json.load(res)
-    except (urllib.error.URLError, ValueError):
-        return None
-    if info.get("aud") != GOOGLE_CLIENT_ID:
-        return None
-    if info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
-        return None
-    if str(info.get("email_verified")).lower() != "true":
-        return None
-    return info
+    return jsonify(user), 200
 
 
 @app.get("/api/config")
-def public_config():
-    return jsonify({
-        "google_client_id": GOOGLE_CLIENT_ID,
-        "allowed_domains": ALLOWED_DOMAINS,
-        "demo_mode": not GOOGLE_CLIENT_ID,
-    })
-
-
-@app.post("/api/auth/google")
-def login_google():
-    if not GOOGLE_CLIENT_ID:
-        return error("Login Google belum dikonfigurasi (GOOGLE_CLIENT_ID kosong)", 503)
-    credential = (request.get_json(silent=True) or {}).get("credential", "")
-    info = verify_google_token(credential) if credential else None
-    if not info:
-        return error("Token Google tidak valid, coba masuk lagi", 401)
-    email = info["email"].lower()
-    if not email_allowed(email):
-        return domain_error()
-    return jsonify(find_or_create_user(email, info.get("name", ""), info.get("picture", "")))
-
-
-@app.post("/api/login")
-def login():
-    """Mode demo: login cukup dengan email kampus. Dimatikan jika Google login aktif."""
-    if GOOGLE_CLIENT_ID:
-        return error("Silakan masuk dengan akun Google kampus", 403)
-    email = (request.get_json(silent=True) or {}).get("email", "").strip().lower()
-    if not email_allowed(email):
-        return domain_error()
-    return jsonify(find_or_create_user(email))
+def get_config():
+    return jsonify(
+        {
+            "allowed_domains": ALLOWED_DOMAINS,
+            "admin_email": ADMIN_EMAIL,
+            "categories": data.KATEGORI,
+        }
+    )
 
 
 # ---------------------------------------------------------------- USER CRUD
 @app.get("/api/users")
 def list_users():
-    return jsonify(data.users)
-
-
-@app.post("/api/users")
-def create_user():
-    body = request.get_json(silent=True) or {}
-    missing = missing_fields(body, ["nama", "email"])
-    if missing:
-        return error(f"Field wajib diisi: {', '.join(missing)}")
-    if any(u["email"].lower() == body["email"].lower() for u in data.users):
-        return error("Email sudah terdaftar")
-    user = {
-        "id": next_id(data.users),
-        "nama": body["nama"],
-        "nim": body.get("nim", "-"),
-        "email": body["email"],
-        "no_hp": body.get("no_hp", ""),
-        "role": body.get("role", "mahasiswa") if body.get("role") in ("mahasiswa", "admin") else "mahasiswa",
-        "foto": "",
-    }
-    data.users.append(user)
-    return jsonify(user), 201
+    return jsonify(data.users), 200
 
 
 @app.get("/api/users/<int:user_id>")
 def get_user(user_id):
     user = find(data.users, user_id)
-    return jsonify(user) if user else error("User tidak ditemukan", 404)
+    if not user:
+        return error("Pengguna tidak ditemukan", 404)
+    return jsonify(user), 200
+
+
+@app.post("/api/users")
+def create_user():
+    """Hanya admin yang boleh membuat pengguna secara manual."""
+    actor = get_current_user()
+    if not actor or actor.get("role") != "admin":
+        return error("Hanya admin yang berhak mengelola pengguna", 403)
+
+    body = request.get_json(silent=True) or {}
+    nama = str(body.get("nama", "")).strip()
+    email = str(body.get("email", "")).strip().lower()
+
+    if not nama or not email:
+        return error("Nama dan email wajib diisi", 400)
+
+    if any(u["email"].lower() == email for u in data.users):
+        return error("Email sudah terdaftar", 400)
+
+    role = body.get("role", "mahasiswa")
+    if role not in ("mahasiswa", "admin"):
+        role = "mahasiswa"
+
+    user = {
+        "id": next_id(data.users),
+        "nama": nama,
+        "nim": body.get("nim", "-"),
+        "email": email,
+        "no_hp": body.get("no_hp", ""),
+        "role": role,
+        "foto": body.get("foto", ""),
+    }
+    data.users.append(user)
+    return jsonify(user), 201
 
 
 @app.put("/api/users/<int:user_id>")
 def update_user(user_id):
-    user = find(data.users, user_id)
-    if not user:
-        return error("User tidak ditemukan", 404)
+    """Admin dapat mengedit user siapa saja; mahasiswa hanya profil dirinya sendiri."""
+    actor = get_current_user()
+    target_user = find(data.users, user_id)
+    if not target_user:
+        return error("Pengguna tidak ditemukan", 404)
+
+    if not actor or (
+        actor.get("role") != "admin" and actor["id"] != target_user["id"]
+    ):
+        return error("Tidak memiliki izin mengubah data pengguna ini", 403)
+
     body = request.get_json(silent=True) or {}
-    for field in ("nama", "nim", "email", "no_hp"):
-        if field in body:
-            user[field] = body[field]
-    if body.get("role") in ("mahasiswa", "admin"):
-        user["role"] = body["role"]
-    return jsonify(user)
+    for key in ("nama", "nim", "no_hp"):
+        if key in body:
+            target_user[key] = str(body[key]).strip()
+
+    # Hanya admin yang boleh mengubah role atau email
+    if actor.get("role") == "admin":
+        if "role" in body and body["role"] in ("mahasiswa", "admin"):
+            target_user["role"] = body["role"]
+        if "email" in body:
+            new_email = str(body["email"]).strip().lower()
+            if (
+                new_email != target_user["email"]
+                and not any(u["email"].lower() == new_email for u in data.users)
+                and "@" in new_email
+            ):
+                target_user["email"] = new_email
+
+    return jsonify(target_user), 200
 
 
 @app.delete("/api/users/<int:user_id>")
 def delete_user(user_id):
-    user = find(data.users, user_id)
-    if not user:
-        return error("User tidak ditemukan", 404)
-    # hapus juga laporan & klaim milik user agar data tetap konsisten
+    """Hapus pengguna (khusus admin). Menghapus pula laporan & klaim miliknya."""
+    actor = get_current_user()
+    if not actor or actor.get("role") != "admin":
+        return error("Hanya admin yang boleh menghapus pengguna", 403)
+
+    target_user = find(data.users, user_id)
+    if not target_user:
+        return error("Pengguna tidak ditemukan", 404)
+
+    if target_user["email"] == ADMIN_EMAIL:
+        return error("Akun admin utama tidak boleh dihapus", 400)
+
+    # Hapus semua klaim pengklaim
+    data.claims[:] = [c for c in data.claims if c["id_pengklaim"] != user_id]
+
+    # Hapus semua barang yang dilaporkan user ini beserta klaim barangnya
     own_item_ids = {i["id"] for i in data.items if i["id_pelapor"] == user_id}
-    data.claims[:] = [c for c in data.claims
-                      if c["id_pengklaim"] != user_id and c["id_barang"] not in own_item_ids]
+    data.claims[:] = [
+        c for c in data.claims if c["id_barang"] not in own_item_ids
+    ]
     data.items[:] = [i for i in data.items if i["id_pelapor"] != user_id]
-    data.users.remove(user)
+
+    data.users.remove(target_user)
+
     for item in data.items:
         refresh_item_status(item["id"])
-    return jsonify({"message": "User dihapus"})
+
+    return jsonify({"message": "Pengguna berhasil dihapus"}), 200
 
 
 @app.get("/api/users/<int:user_id>/activity")
 def user_activity(user_id):
-    """Fitur 'Aktivitas Saya' (User + Barang + Klaim)."""
-    user = find(data.users, user_id)
-    if not user:
-        return error("User tidak ditemukan", 404)
-    return jsonify({
-        "user": user,
-        "laporan": [item_with_relations(i) for i in data.items if i["id_pelapor"] == user_id],
-        "klaim": [claim_with_relations(c) for c in data.claims if c["id_pengklaim"] == user_id],
-    })
+    """Aktivitas saya: laporan yang dibuat dan klaim yang diajukan oleh user."""
+    target_user = find(data.users, user_id)
+    if not target_user:
+        return error("Pengguna tidak ditemukan", 404)
+
+    my_items = [
+        item_with_relations(i)
+        for i in data.items
+        if i["id_pelapor"] == user_id
+    ]
+    my_claims = [
+        claim_with_relations(c)
+        for c in data.claims
+        if c["id_pengklaim"] == user_id
+    ]
+
+    return jsonify(
+        {
+            "user": target_user,
+            "laporan": my_items,
+            "klaim": my_claims,
+        }
+    ), 200
 
 
-# ---------------------------------------------------------------- BARANG CRUD
-@app.get("/api/items")
-def list_items():
-    result = data.items
-    tipe = request.args.get("tipe")
-    kategori = request.args.get("kategori")
-    lokasi = request.args.get("lokasi", "").lower()
-    tanggal = request.args.get("tanggal")
-    status = request.args.get("status")
-    q = request.args.get("q", "").lower()
-    if tipe:
-        result = [i for i in result if i["tipe"] == tipe]
-    if kategori:
-        result = [i for i in result if i["kategori"] == kategori]
-    if lokasi:
-        result = [i for i in result if lokasi in i["lokasi"].lower()]
-    if tanggal:
-        result = [i for i in result if i["tanggal"] == tanggal]
-    if status:
-        result = [i for i in result if i["status"] == status]
-    if q:
-        result = [i for i in result if q in i["judul"].lower() or q in i["deskripsi"].lower()]
-    result = sorted(result, key=lambda i: i["tanggal"], reverse=True)
-    return jsonify([item_with_relations(i) for i in result])
-
-
+# ---------------------------------------------------------------- ITEM (BARANG) CRUD
 @app.get("/api/categories")
 def list_categories():
-    return jsonify(data.KATEGORI)
+    return jsonify(data.KATEGORI), 200
 
 
-@app.post("/api/items")
-def create_item():
-    body = request.get_json(silent=True) or {}
-    missing = missing_fields(body, ["judul", "kategori", "lokasi", "tanggal", "tipe", "id_pelapor"])
-    if missing:
-        return error(f"Field wajib diisi: {', '.join(missing)}")
-    if body["tipe"] not in ("hilang", "ditemukan"):
-        return error("Tipe harus 'hilang' atau 'ditemukan'")
-    if not find(data.users, int(body["id_pelapor"])):
-        return error("Pelapor tidak ditemukan", 404)
-    item = {
-        "id": next_id(data.items),
-        "judul": body["judul"],
-        "kategori": body["kategori"],
-        "deskripsi": body.get("deskripsi", ""),
-        "lokasi": body["lokasi"],
-        "tanggal": body["tanggal"],
-        "tipe": body["tipe"],
-        "status": "tersedia",
-        "url_foto": body.get("url_foto", ""),
-        "id_pelapor": int(body["id_pelapor"]),
-    }
-    data.items.append(item)
-    return jsonify(item_with_relations(item)), 201
+@app.get("/api/items")
+def list_items():
+    result = list(data.items)
+    tipe = request.args.get("tipe", "").lower()
+    kategori = request.args.get("kategori", "").strip()
+    status = request.args.get("status", "").lower()
+    q = request.args.get("q", "").strip().lower()
+
+    # Normalisasi tipe
+    if tipe in ("hilang", "lost"):
+        result = [i for i in result if i["tipe"] in ("hilang", "lost")]
+    elif tipe in ("ditemukan", "found"):
+        result = [i for i in result if i["tipe"] in ("ditemukan", "found")]
+
+    # Normalisasi status
+    if status:
+        if status in ("tersedia", "open"):
+            result = [i for i in result if i["status"] in ("tersedia", "open")]
+        elif status in ("diklaim", "claimed"):
+            result = [
+                i for i in result if i["status"] in ("diklaim", "claimed")
+            ]
+        elif status in ("dikembalikan", "returned"):
+            result = [
+                i for i in result if i["status"] in ("dikembalikan", "returned")
+            ]
+
+    # Filter kategori
+    if kategori and kategori != "Semua kategori":
+        result = [i for i in result if i["kategori"] == kategori]
+
+    # Pencarian teks (judul, deskripsi, lokasi)
+    if q:
+        result = [
+            i
+            for i in result
+            if q in i["judul"].lower()
+            or q in i.get("deskripsi", "").lower()
+            or q in i.get("lokasi", "").lower()
+        ]
+
+    # Urutkan berdasarkan tanggal terbaru
+    result.sort(key=lambda i: i.get("tanggal", ""), reverse=True)
+    return jsonify([item_with_relations(i) for i in result]), 200
 
 
 @app.get("/api/items/<int:item_id>")
@@ -304,154 +402,330 @@ def get_item(item_id):
     item = find(data.items, item_id)
     if not item:
         return error("Barang tidak ditemukan", 404)
+
     result = item_with_relations(item)
-    result["klaim"] = [claim_with_relations(c) for c in data.claims if c["id_barang"] == item_id]
-    return jsonify(result)
+    # Sertakan riwayat klaim barang
+    result["klaim"] = [
+        claim_with_relations(c)
+        for c in data.claims
+        if c["id_barang"] == item_id
+    ]
+    return jsonify(result), 200
+
+
+@app.post("/api/items")
+def create_item():
+    """Semua pengguna yang login boleh melapor barang dan upload foto."""
+    actor = get_current_user()
+    body = request.get_json(silent=True) or {}
+
+    pelapor_id = body.get("id_pelapor")
+    if not pelapor_id and actor:
+        pelapor_id = actor["id"]
+
+    pelapor = find(data.users, pelapor_id)
+    if not pelapor:
+        return error(
+            "Identitas pelapor tidak valid. Silakan login kembali.", 401
+        )
+
+    # Validasi field wajib
+    judul = str(body.get("judul", "")).strip()
+    kategori = str(body.get("kategori", "")).strip()
+    lokasi = str(body.get("lokasi", "")).strip()
+    tanggal = str(body.get("tanggal", "")).strip() or date.today().isoformat()
+    tipe = str(body.get("tipe", "")).strip().lower()
+
+    if not judul or not kategori or not lokasi:
+        return error("Judul, kategori, dan lokasi wajib diisi", 400)
+
+    if tipe not in ("lost", "found", "hilang", "ditemukan"):
+        return error("Tipe harus 'hilang'/'lost' atau 'ditemukan'/'found'", 400)
+
+    # Normalisasi tipe ke 'lost' / 'found'
+    norm_tipe = "lost" if tipe in ("lost", "hilang") else "found"
+
+    item = {
+        "id": next_id(data.items),
+        "judul": judul,
+        "kategori": (
+            kategori if kategori in data.KATEGORI else data.KATEGORI[0]
+        ),
+        "deskripsi": str(body.get("deskripsi", "")).strip(),
+        "lokasi": lokasi,
+        "tanggal": tanggal,
+        "tipe": norm_tipe,
+        "status": "open",  # Laporan baru langsung open (Tersedia)
+        "url_foto": body.get("url_foto", ""),  # Data URL base64
+        "id_pelapor": pelapor["id"],
+    }
+    data.items.append(item)
+    return jsonify(item_with_relations(item)), 201
 
 
 @app.put("/api/items/<int:item_id>")
 def update_item(item_id):
-    """Edit laporan: hanya pelapor atau admin (dikirim lewat field id_user)."""
+    """PUT hanya boleh oleh pemilik laporan atau admin."""
+    actor = get_current_user()
     item = find(data.items, item_id)
     if not item:
         return error("Barang tidak ditemukan", 404)
+
+    if not actor or (
+        actor.get("role") != "admin" and actor["id"] != item["id_pelapor"]
+    ):
+        return error(
+            "Hanya pemilik laporan atau admin yang boleh mengubah barang ini",
+            403,
+        )
+
     body = request.get_json(silent=True) or {}
-    actor = find(data.users, int(body.get("id_user", 0) or 0))
-    if not actor or (actor["role"] != "admin" and actor["id"] != item["id_pelapor"]):
-        return error("Hanya pelapor atau admin yang boleh mengubah laporan", 403)
-    for field in ("judul", "kategori", "deskripsi", "lokasi", "tanggal", "url_foto"):
-        if field in body:
-            item[field] = body[field]
-    if body.get("tipe") in ("hilang", "ditemukan"):
-        item["tipe"] = body["tipe"]
-    return jsonify(item_with_relations(item))
+    for key in ("judul", "kategori", "deskripsi", "lokasi", "tanggal", "url_foto"):
+        if key in body:
+            item[key] = body[key]
+
+    if "tipe" in body:
+        t = str(body["tipe"]).lower()
+        if t in ("lost", "hilang"):
+            item["tipe"] = "lost"
+        elif t in ("found", "ditemukan"):
+            item["tipe"] = "found"
+
+    if (
+        "status" in body
+        and actor.get("role") == "admin"
+        and body["status"] in ("open", "claimed", "returned")
+    ):
+        item["status"] = body["status"]
+
+    return jsonify(item_with_relations(item)), 200
 
 
 @app.delete("/api/items/<int:item_id>")
 def delete_item(item_id):
+    """DELETE hanya boleh oleh pemilik laporan atau admin (menurunkan laporan tidak pantas)."""
+    actor = get_current_user()
     item = find(data.items, item_id)
     if not item:
         return error("Barang tidak ditemukan", 404)
-    actor = find(data.users, int(request.args.get("id_user", 0) or 0))
-    if not actor or (actor["role"] != "admin" and actor["id"] != item["id_pelapor"]):
-        return error("Hanya pelapor atau admin yang boleh menghapus laporan", 403)
+
+    if not actor or (
+        actor.get("role") != "admin" and actor["id"] != item["id_pelapor"]
+    ):
+        return error(
+            "Hanya pemilik laporan atau admin yang boleh menghapus barang ini",
+            403,
+        )
+
+    # Hapus klaim terkait barang ini
     data.claims[:] = [c for c in data.claims if c["id_barang"] != item_id]
     data.items.remove(item)
-    return jsonify({"message": "Laporan dihapus"})
+
+    return jsonify({"message": "Laporan barang berhasil dihapus"}), 200
 
 
-# ---------------------------------------------------------------- KLAIM CRUD
+# ---------------------------------------------------------------- CLAIM (KLAIM) CRUD
 @app.get("/api/claims")
 def list_claims():
-    result = data.claims
-    for field in ("id_barang", "id_pengklaim"):
-        if request.args.get(field):
-            result = [c for c in result if c[field] == int(request.args[field])]
-    if request.args.get("status"):
-        result = [c for c in result if c["status"] == request.args["status"]]
-    return jsonify([claim_with_relations(c) for c in result])
+    result = list(data.claims)
+    item_id = request.args.get("id_barang")
+    user_id = request.args.get("id_pengklaim")
+    status = request.args.get("status")
 
+    if item_id:
+        result = [c for c in result if c["id_barang"] == int(item_id)]
+    if user_id:
+        result = [c for c in result if c["id_pengklaim"] == int(user_id)]
+    if status:
+        norm_status = status.lower()
+        if norm_status in ("pending", "menunggu"):
+            result = [
+                c for c in result if c["status"] in ("pending", "menunggu")
+            ]
+        elif norm_status in ("approved", "disetujui"):
+            result = [
+                c for c in result if c["status"] in ("approved", "disetujui")
+            ]
+        elif norm_status in ("rejected", "ditolak"):
+            result = [
+                c for c in result if c["status"] in ("rejected", "ditolak")
+            ]
 
-@app.post("/api/claims")
-def create_claim():
-    """Fitur 'Ajukan Klaim' (Klaim + Barang + User)."""
-    body = request.get_json(silent=True) or {}
-    missing = missing_fields(body, ["id_barang", "id_pengklaim", "bukti_ciri"])
-    if missing:
-        return error(f"Field wajib diisi: {', '.join(missing)}")
-    item = find(data.items, int(body["id_barang"]))
-    user = find(data.users, int(body["id_pengklaim"]))
-    if not item or not user:
-        return error("Barang atau user tidak ditemukan", 404)
-    if item["status"] == "dikembalikan":
-        return error("Barang sudah dikembalikan ke pemiliknya")
-    if item["id_pelapor"] == user["id"]:
-        return error("Tidak bisa mengklaim laporan sendiri")
-    if any(c["id_barang"] == item["id"] and c["id_pengklaim"] == user["id"] and c["status"] == "menunggu"
-           for c in data.claims):
-        return error("Kamu sudah punya klaim yang menunggu untuk barang ini")
-    claim = {
-        "id": next_id(data.claims),
-        "id_barang": item["id"],
-        "id_pengklaim": user["id"],
-        "bukti_ciri": body["bukti_ciri"],
-        "status": "menunggu",
-        "tanggal_klaim": date.today().isoformat(),
-    }
-    data.claims.append(claim)
-    refresh_item_status(item["id"])  # -> "diklaim"
-    return jsonify(claim_with_relations(claim)), 201
+    result.sort(key=lambda c: c.get("tanggal_klaim", ""), reverse=True)
+    return jsonify([claim_with_relations(c) for c in result]), 200
 
 
 @app.get("/api/claims/<int:claim_id>")
 def get_claim(claim_id):
     claim = find(data.claims, claim_id)
-    return jsonify(claim_with_relations(claim)) if claim else error("Klaim tidak ditemukan", 404)
+    if not claim:
+        return error("Klaim tidak ditemukan", 404)
+    return jsonify(claim_with_relations(claim)), 200
+
+
+@app.post("/api/claims")
+def create_claim():
+    """
+    Mahasiswa mengajukan klaim atas barang:
+    - Pengguna tidak boleh mengklaim barang miliknya sendiri.
+    - Barang yang sedang claimed atau returned tidak bisa diklaim lagi.
+    - Status barang otomatis menjadi claimed.
+    """
+    actor = get_current_user()
+    body = request.get_json(silent=True) or {}
+
+    pengklaim_id = body.get("id_pengklaim")
+    if not pengklaim_id and actor:
+        pengklaim_id = actor["id"]
+
+    pengklaim = find(data.users, pengklaim_id)
+    if not pengklaim:
+        return error("Identitas pengklaim tidak valid", 401)
+
+    item_id = body.get("id_barang")
+    bukti_ciri = str(body.get("bukti_ciri", "")).strip()
+
+    if not item_id or not bukti_ciri:
+        return error("Barang dan bukti ciri khas wajib diisi", 400)
+
+    item = find(data.items, item_id)
+    if not item:
+        return error("Barang yang hendak diklaim tidak ditemukan", 404)
+
+    # Aturan bisnis penting
+    if item["id_pelapor"] == pengklaim["id"]:
+        return error("Anda tidak boleh mengklaim barang yang Anda laporkan sendiri", 400)
+
+    if item["status"] in ("claimed", "diklaim"):
+        return error("Barang ini sedang dalam proses klaim oleh pengguna lain", 400)
+
+    if item["status"] in ("returned", "dikembalikan"):
+        return error("Barang ini sudah dikembalikan kepada pemiliknya", 400)
+
+    # Cek duplikasi klaim pending
+    if any(
+        c["id_barang"] == item["id"]
+        and c["id_pengklaim"] == pengklaim["id"]
+        and c["status"] in ("pending", "menunggu")
+        for c in data.claims
+    ):
+        return error("Anda sudah memiliki pengajuan klaim aktif untuk barang ini", 400)
+
+    claim = {
+        "id": next_id(data.claims),
+        "id_barang": item["id"],
+        "id_pengklaim": pengklaim["id"],
+        "bukti_ciri": bukti_ciri,
+        "status": "pending",
+        "tanggal_klaim": date.today().isoformat(),
+    }
+    data.claims.append(claim)
+
+    # Status barang menjadi claimed
+    item["status"] = "claimed"
+
+    return jsonify(claim_with_relations(claim)), 201
 
 
 @app.put("/api/claims/<int:claim_id>")
-def update_claim(claim_id):
-    """Pengklaim mengubah bukti ciri selama klaim masih 'menunggu'."""
+def update_or_verify_claim(claim_id):
+    """
+    PUT /api/claims/<id>:
+    - Jika memuat field 'status' (approved/rejected): verifikasi klaim KHUSUS ADMIN.
+    - Jika memuat 'bukti_ciri': pengklaim dapat memperbarui selama masih pending.
+    """
+    actor = get_current_user()
     claim = find(data.claims, claim_id)
     if not claim:
         return error("Klaim tidak ditemukan", 404)
-    if claim["status"] != "menunggu":
-        return error("Klaim yang sudah diverifikasi tidak bisa diubah")
+
     body = request.get_json(silent=True) or {}
-    if not str(body.get("bukti_ciri", "")).strip():
-        return error("Bukti ciri tidak boleh kosong")
-    claim["bukti_ciri"] = body["bukti_ciri"]
-    return jsonify(claim_with_relations(claim))
+
+    # Kasus 1: Verifikasi oleh Admin
+    if "status" in body:
+        if not actor or actor.get("role") != "admin":
+            return error("Hanya admin yang berhak menyetujui atau menolak klaim", 403)
+
+        new_status = str(body["status"]).strip().lower()
+        if new_status in ("approved", "disetujui"):
+            new_status = "approved"
+        elif new_status in ("rejected", "ditolak"):
+            new_status = "rejected"
+        else:
+            return error("Status klaim harus 'approved' atau 'rejected'", 400)
+
+        claim["status"] = new_status
+        item = find(data.items, claim["id_barang"])
+
+        if new_status == "approved":
+            # Barang menjadi returned
+            if item:
+                item["status"] = "returned"
+            # Tolak otomatis klaim lain yang masih pending untuk barang yang sama
+            for other in data.claims:
+                if (
+                    other["id_barang"] == claim["id_barang"]
+                    and other["id"] != claim["id"]
+                    and other["status"] in ("pending", "menunggu")
+                ):
+                    other["status"] = "rejected"
+        else:
+            # Jika ditolak, cek apakah masih ada klaim pending lain
+            refresh_item_status(claim["id_barang"])
+
+        return jsonify(claim_with_relations(claim)), 200
+
+    # Kasus 2: Edit bukti ciri oleh pengklaim
+    if "bukti_ciri" in body:
+        if not actor or (
+            actor.get("role") != "admin" and actor["id"] != claim["id_pengklaim"]
+        ):
+            return error("Hanya pengklaim yang boleh mengubah bukti ciri", 403)
+
+        if claim["status"] not in ("pending", "menunggu"):
+            return error("Klaim yang sudah diverifikasi tidak dapat diubah", 400)
+
+        claim["bukti_ciri"] = str(body["bukti_ciri"]).strip()
+        return jsonify(claim_with_relations(claim)), 200
+
+    return error("Tidak ada data yang diperbarui", 400)
 
 
 @app.delete("/api/claims/<int:claim_id>")
 def delete_claim(claim_id):
-    """Batalkan klaim yang masih menunggu."""
+    """Batalkan klaim (hanya pengklaim atau admin)."""
+    actor = get_current_user()
     claim = find(data.claims, claim_id)
     if not claim:
         return error("Klaim tidak ditemukan", 404)
-    if claim["status"] != "menunggu":
-        return error("Klaim yang sudah diverifikasi tidak bisa dibatalkan")
+
+    if not actor or (
+        actor.get("role") != "admin" and actor["id"] != claim["id_pengklaim"]
+    ):
+        return error("Tidak memiliki izin membatalkan klaim ini", 403)
+
     data.claims.remove(claim)
     refresh_item_status(claim["id_barang"])
-    return jsonify({"message": "Klaim dibatalkan"})
+
+    return jsonify({"message": "Klaim berhasil dibatalkan"}), 200
 
 
-@app.post("/api/claims/<int:claim_id>/verify")
-def verify_claim(claim_id):
-    """Fitur 'Verifikasi Klaim' oleh admin (Klaim + Barang + User)."""
-    claim = find(data.claims, claim_id)
-    if not claim:
-        return error("Klaim tidak ditemukan", 404)
-    body = request.get_json(silent=True) or {}
-    admin = find(data.users, int(body.get("id_admin", 0) or 0))
-    if not admin or admin["role"] != "admin":
-        return error("Hanya admin yang boleh memverifikasi klaim", 403)
-    if body.get("status") not in ("disetujui", "ditolak"):
-        return error("Status harus 'disetujui' atau 'ditolak'")
-    if claim["status"] != "menunggu":
-        return error("Klaim sudah diverifikasi sebelumnya")
-    claim["status"] = body["status"]
-    if claim["status"] == "disetujui":
-        # klaim lain untuk barang yang sama otomatis ditolak
-        for other in data.claims:
-            if other["id_barang"] == claim["id_barang"] and other["id"] != claim["id"] and other["status"] == "menunggu":
-                other["status"] = "ditolak"
-    refresh_item_status(claim["id_barang"])
-    return jsonify(claim_with_relations(claim))
-
-
-# ---------------------------------------------------------------- frontend statis
+# ---------------------------------------------------------------- penyajian frontend statis
 @app.get("/")
-def index():
+def serve_index():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 
 @app.get("/<path:path>")
-def static_files(path):
+def serve_static(path):
     return send_from_directory(FRONTEND_DIR, path)
 
 
+# ---------------------------------------------------------------- entrypoint
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=os.environ.get("FLASK_DEBUG") == "1")
+    print(f"Lost & Found Server running on http://127.0.0.1:{PORT}")
+    app.run(
+        host="0.0.0.0",
+        port=PORT,
+        debug=os.environ.get("FLASK_DEBUG") == "1",
+    )

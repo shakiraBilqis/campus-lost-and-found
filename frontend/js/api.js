@@ -1,47 +1,79 @@
 // Pembungkus fetch untuk memanggil REST API backend.
+// Mendukung header X-User-Id untuk otorisasi sederhana.
+
 async function request(method, path, body) {
+  let currentUser = null;
+  try {
+    currentUser = JSON.parse(localStorage.getItem("lf_user") || "null");
+  } catch (e) {
+    currentUser = null;
+  }
+
+  const headers = {};
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (currentUser && currentUser.id) {
+    headers["X-User-Id"] = String(currentUser.id);
+  }
+
   const res = await fetch(API_BASE + path, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : {},
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `Request gagal (${res.status})`);
+  if (!res.ok) {
+    throw new Error(json.error || `Request gagal (${res.status})`);
+  }
   return json;
 }
 
 const api = {
+  health: () => request("GET", "/health"),
   config: () => request("GET", "/api/config"),
   login: (email) => request("POST", "/api/login", { email }),
-  loginGoogle: (credential) => request("POST", "/api/auth/google", { credential }),
 
-  // User
+  // User CRUD
   listUsers: () => request("GET", "/api/users"),
   getUser: (id) => request("GET", `/api/users/${id}`),
-  createUser: (u) => request("POST", "/api/users", u),
-  updateUser: (id, u) => request("PUT", `/api/users/${id}`, u),
+  createUser: (userData) => request("POST", "/api/users", userData),
+  updateUser: (id, userData) => request("PUT", `/api/users/${id}`, userData),
   deleteUser: (id) => request("DELETE", `/api/users/${id}`),
   activity: (id) => request("GET", `/api/users/${id}/activity`),
 
-  // Barang
+  // Item (Barang) CRUD
   categories: () => request("GET", "/api/categories"),
   listItems: (filters = {}) => {
-    const qs = new URLSearchParams(Object.entries(filters).filter(([, v]) => v)).toString();
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.append(key, val);
+      }
+    }
+    const qs = params.toString();
     return request("GET", `/api/items${qs ? "?" + qs : ""}`);
   },
   getItem: (id) => request("GET", `/api/items/${id}`),
-  createItem: (i) => request("POST", "/api/items", i),
-  updateItem: (id, i) => request("PUT", `/api/items/${id}`, i),
-  deleteItem: (id, idUser) => request("DELETE", `/api/items/${id}?id_user=${idUser}`),
+  createItem: (itemData) => request("POST", "/api/items", itemData),
+  updateItem: (id, itemData) => request("PUT", `/api/items/${id}`, itemData),
+  deleteItem: (id) => request("DELETE", `/api/items/${id}`),
 
-  // Klaim
+  // Claim (Klaim) CRUD
   listClaims: (filters = {}) => {
-    const qs = new URLSearchParams(filters).toString();
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.append(key, val);
+      }
+    }
+    const qs = params.toString();
     return request("GET", `/api/claims${qs ? "?" + qs : ""}`);
   },
-  createClaim: (c) => request("POST", "/api/claims", c),
-  updateClaim: (id, c) => request("PUT", `/api/claims/${id}`, c),
+  getClaim: (id) => request("GET", `/api/claims/${id}`),
+  createClaim: (claimData) => request("POST", "/api/claims", claimData),
+  updateClaim: (id, claimData) => request("PUT", `/api/claims/${id}`, claimData),
   deleteClaim: (id) => request("DELETE", `/api/claims/${id}`),
-  verifyClaim: (id, status, idAdmin) =>
-    request("POST", `/api/claims/${id}/verify`, { status, id_admin: idAdmin }),
+  verifyClaim: (id, status) => request("PUT", `/api/claims/${id}`, { status }),
 };
