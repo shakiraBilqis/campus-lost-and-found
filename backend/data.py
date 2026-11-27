@@ -52,7 +52,7 @@ items = [
         "tanggal": "2026-11-22",
         "tipe": "found",  # found / lost
         "status": "claimed",  # open, claimed, returned
-        "url_foto": "",
+        "url_foto": "img/charger.jpg",
         "id_pelapor": 4,  # Rizky
     },
     {
@@ -64,7 +64,7 @@ items = [
         "tanggal": "2026-11-24",
         "tipe": "lost",
         "status": "open",
-        "url_foto": "",
+        "url_foto": "img/dompet.jpg",
         "id_pelapor": 2,  # Budi
     },
     {
@@ -76,7 +76,7 @@ items = [
         "tanggal": "2026-11-20",
         "tipe": "found",
         "status": "open",
-        "url_foto": "",
+        "url_foto": "img/ktm.jpg",
         "id_pelapor": 3,  # Siti
     },
     {
@@ -88,7 +88,7 @@ items = [
         "tanggal": "2026-11-18",
         "tipe": "found",
         "status": "returned",
-        "url_foto": "",
+        "url_foto": "img/botol.jpg",
         "id_pelapor": 2,  # Budi
     },
 ]

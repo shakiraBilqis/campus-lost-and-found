@@ -1,40 +1,107 @@
 /* ==========================================================================
    Lost & Found Telkom University - Desain Sistem
-   Font: Schibsted Grotesk | Radius: 6px konsisten | Palet Dark & Telkom Red
+   Font: Schibsted Grotesk | Radius: 6px konsisten | Dark & Light Mode
    ========================================================================== */
 
 :root {
   --font-family: "Schibsted Grotesk", system-ui, -apple-system, sans-serif;
   --radius: 6px;
 
-  /* Palet Warna */
+  /* Palet Dark Mode (Default) */
   --bg-app: #12161c;
-  --bg-surface: #181d24;
+  --bg-sidebar: #12161c;
+  --bg-surface: #171c24;
   --bg-surface-hover: #1f252f;
   --bg-surface-active: #27303d;
+  --bg-input: #1a2029;
+  --bg-subtle: #141820;
   --border-line: #262e3b;
   --border-subtle: #1c222c;
 
   --text-main: #f1f5f9;
+  --text-strong: #ffffff;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
 
-  /* Aksen Kampus & Status */
-  --color-primary: #ff4d6d; /* Coral / Telkom Red aksen */
-  --color-primary-hover: #e63956;
-  --color-primary-subtle: rgba(255, 77, 109, 0.12);
+  /* Active states */
+  --active-bg: #ffffff;
+  --active-text: #12161c;
 
-  --color-blue: #38bdf8;   /* Ditemukan */
-  --color-blue-subtle: rgba(56, 189, 248, 0.12);
-  --color-red: #f87171;    /* Hilang */
-  --color-red-subtle: rgba(248, 113, 113, 0.12);
-  --color-green: #34d399;  /* Tersedia / Disetujui */
-  --color-yellow: #fbbf24; /* Sedang diklaim / Menunggu */
-  --color-grey: #94a3b8;   /* Sudah kembali / Ditolak */
+  /* Aksen Kampus & Status */
+  --color-primary: #c8102e;
+  --color-primary-hover: #a50d26;
+  --color-hero: #c8102e;
+
+  --color-blue: #38bdf8;
+  /* Ditemukan */
+  --color-red: #c8102e;
+  /* Hilang */
+  --color-green: #34d399;
+  /* Tersedia / Disetujui */
+  --color-yellow: #fbbf24;
+  /* Sedang diklaim / Menunggu */
+  --color-grey: #94a3b8;
+  /* Sudah kembali / Ditolak */
+
+  --danger-bg: rgba(200, 16, 46, 0.16);
+  --danger-border: rgba(200, 16, 46, 0.45);
+  --danger-text: #ffffff;
+  --danger-bg-hover: rgba(200, 16, 46, 0.28);
+
+  --toast-bg: #1e293b;
+  --toast-text: #ffffff;
+}
+
+/* Palet Light Mode */
+[data-theme="light"] {
+  --bg-app: #f6f7f9;
+  --bg-sidebar: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --bg-surface-active: #e2e8f0;
+  --bg-input: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --border-line: #e2e8f0;
+  --border-subtle: #eef2f6;
+
+  --text-main: #1e293b;
+  --text-strong: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+
+  /* Active states */
+  --active-bg: #0f172a;
+  --active-text: #ffffff;
+
+  /* Aksen Kampus & Status (Kontras tinggi di latar terang) */
+  --color-primary: #c8102e;
+  --color-primary-hover: #a50d26;
+  --color-hero: #c8102e;
+
+  --color-blue: #1d4ed8;
+  /* Ditemukan */
+  --color-red: #c8102e;
+  /* Hilang */
+  --color-green: #15803d;
+  /* Tersedia / Disetujui */
+  --color-yellow: #b45309;
+  /* Sedang diklaim / Menunggu */
+  --color-grey: #64748b;
+  /* Sudah kembali / Ditolak */
+
+  --danger-bg: rgba(200, 16, 46, 0.1);
+  --danger-border: rgba(200, 16, 46, 0.35);
+  --danger-text: #c8102e;
+  --danger-bg-hover: rgba(200, 16, 46, 0.18);
+
+  --toast-bg: #0f172a;
+  --toast-text: #ffffff;
 }
 
 /* Reset Dasar */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -74,9 +141,63 @@ a {
   text-decoration: none;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font: inherit;
   color: inherit;
+}
+
+/* ==========================================================================
+   Theme Toggle & Topbar
+   ========================================================================== */
+
+.desktop-topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.login-topbar {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-line);
+  background-color: var(--bg-surface);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.theme-toggle:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-strong);
+}
+
+.theme-toggle svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.theme-toggle-icon {
+  padding: 0.4rem 0.5rem;
+}
+
+.theme-toggle-icon .theme-label {
+  display: none;
 }
 
 /* ==========================================================================
@@ -116,13 +237,13 @@ button, input, select, textarea {
 }
 
 .btn-danger {
-  background-color: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
+  background-color: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
 }
 
 .btn-danger:hover {
-  background-color: rgba(239, 68, 68, 0.25);
+  background-color: var(--danger-bg-hover);
 }
 
 .btn-sm {
@@ -168,7 +289,7 @@ button, input, select, textarea {
 .form-group input,
 .form-group select,
 .form-group textarea {
-  background-color: #1a2029;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 0.65rem 0.85rem;
@@ -193,7 +314,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Halaman Login (Split-screen sesuai Gambar 1)
+   Halaman Login (Split-screen)
    ========================================================================== */
 
 .login-layout {
@@ -203,7 +324,7 @@ button, input, select, textarea {
 
 .login-hero {
   flex: 1.1;
-  background-color: #ff4d6d;
+  background-color: var(--color-hero);
   display: flex;
   align-items: flex-end;
   padding: 4rem 3.5rem;
@@ -229,8 +350,9 @@ button, input, select, textarea {
 }
 
 .login-panel {
+  position: relative;
   flex: 0.9;
-  background-color: #12161c;
+  background-color: var(--bg-app);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,6 +367,7 @@ button, input, select, textarea {
 .login-title {
   font-size: 1.75rem;
   font-weight: 700;
+  color: var(--text-strong);
   margin-bottom: 0.4rem;
 }
 
@@ -270,7 +393,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   Layout Aplikasi (Desktop Sidebar + Main Content sesuai Gambar 2)
+   Layout Aplikasi (Desktop Sidebar + Main Content)
    ========================================================================== */
 
 .app-layout {
@@ -281,8 +404,8 @@ button, input, select, textarea {
 /* Sidebar Desktop */
 .sidebar {
   width: 230px;
-  background-color: #12161c;
-  border-right: 1px solid var(--border-line);
+  background-color: #c8102e;
+  border-right: 1px solid rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -291,6 +414,7 @@ button, input, select, textarea {
   top: 0;
   height: 100vh;
   flex-shrink: 0;
+  color: #ffffff;
 }
 
 .brand {
@@ -302,7 +426,7 @@ button, input, select, textarea {
 }
 
 .brand-accent {
-  color: var(--color-primary);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .nav-menu {
@@ -318,22 +442,22 @@ button, input, select, textarea {
   border-radius: var(--radius);
   font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.85);
   transition: background-color 0.15s, color 0.15s;
 }
 
 .nav-item:hover {
-  color: var(--text-main);
-  background-color: var(--bg-surface-hover);
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.14);
 }
 
 .nav-item.active {
   background-color: #ffffff;
-  color: #12161c;
+  color: #c8102e;
 }
 
 .sidebar-bottom {
-  border-top: 1px solid var(--border-line);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
   padding-top: 1.25rem;
 }
 
@@ -345,8 +469,16 @@ button, input, select, textarea {
 
 .user-info .user-role {
   font-size: 0.8rem;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.78);
   margin-bottom: 0.4rem;
+}
+
+.sidebar .text-danger {
+  color: #ffe4e8;
+}
+
+.sidebar .text-danger:hover {
+  color: #ffffff;
 }
 
 /* Mobile Topbar */
@@ -357,17 +489,28 @@ button, input, select, textarea {
 /* Konten Utama */
 .main-content {
   flex: 1;
-  padding: 2.5rem 3rem;
-  max-width: 1080px;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 1.5rem 2.5rem 2.5rem;
 }
 
 .page-header {
   margin-bottom: 1.75rem;
 }
 
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .page-header h1 {
   font-size: 1.85rem;
   font-weight: 700;
+  color: var(--text-strong);
   letter-spacing: -0.02em;
   margin-bottom: 0.25rem;
 }
@@ -396,7 +539,7 @@ button, input, select, textarea {
 
 .search-box input {
   width: 100%;
-  background-color: #1a2029;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 0.65rem 0.85rem;
@@ -410,7 +553,7 @@ button, input, select, textarea {
 }
 
 .filter-select select {
-  background-color: #1a2029;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 0.65rem 0.85rem;
@@ -421,7 +564,7 @@ button, input, select, textarea {
 
 .segmented-control {
   display: inline-flex;
-  background-color: #1a2029;
+  background-color: var(--bg-input);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 2px;
@@ -448,12 +591,12 @@ button, input, select, textarea {
 }
 
 .seg-btn:hover {
-  color: var(--text-main);
+  color: var(--text-strong);
 }
 
 .seg-btn.active {
-  background-color: #ffffff;
-  color: #12161c;
+  background-color: var(--active-bg);
+  color: var(--active-text);
 }
 
 .list-meta {
@@ -466,7 +609,7 @@ button, input, select, textarea {
 }
 
 /* ==========================================================================
-   List Barang: Layout BARIS dengan Thumbnail di Kiri (Gambar 2)
+   List Barang: Layout BARIS dengan Thumbnail di Kiri
    ========================================================================== */
 
 .items-list {
@@ -478,7 +621,7 @@ button, input, select, textarea {
 .item-row {
   display: flex;
   align-items: center;
-  background-color: #171c24;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 0.85rem 1.15rem;
@@ -489,22 +632,23 @@ button, input, select, textarea {
 
 .item-row:hover {
   background-color: var(--bg-surface-hover);
-  border-color: #333d4e;
+  border-color: var(--text-dim);
 }
 
 /* Avatar / Thumbnail */
 .item-thumb {
-  width: 48px;
-  height: 48px;
+  width: 76px;
+  height: 76px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: 1.6rem;
   color: #ffffff;
   flex-shrink: 0;
   overflow: hidden;
+  border: 1px solid var(--border-line);
 }
 
 .item-thumb img {
@@ -522,7 +666,7 @@ button, input, select, textarea {
 .item-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-strong);
   margin-bottom: 0.2rem;
   white-space: nowrap;
   overflow: hidden;
@@ -584,6 +728,7 @@ button, input, select, textarea {
 .status-open {
   color: var(--color-green);
 }
+
 .status-open .status-dot {
   background-color: var(--color-green);
 }
@@ -591,6 +736,7 @@ button, input, select, textarea {
 .status-claimed {
   color: var(--color-yellow);
 }
+
 .status-claimed .status-dot {
   background-color: var(--color-yellow);
 }
@@ -598,6 +744,7 @@ button, input, select, textarea {
 .status-returned {
   color: var(--color-grey);
 }
+
 .status-returned .status-dot {
   background-color: var(--color-grey);
 }
@@ -611,14 +758,14 @@ button, input, select, textarea {
 }
 
 .form-card {
-  background-color: #171c24;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 1.75rem;
 }
 
 .photo-upload-area {
-  background-color: #141920;
+  background-color: var(--bg-subtle);
   border: 1px dashed var(--border-line);
   border-radius: var(--radius);
   padding: 1rem;
@@ -675,7 +822,7 @@ button, input, select, textarea {
 }
 
 .subtab-btn.active {
-  color: #ffffff;
+  color: var(--text-strong);
   border-bottom-color: var(--color-primary);
 }
 
@@ -686,7 +833,7 @@ button, input, select, textarea {
 }
 
 .claim-card {
-  background-color: #171c24;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   padding: 1rem 1.25rem;
@@ -702,12 +849,13 @@ button, input, select, textarea {
 .claim-card-title {
   font-weight: 700;
   font-size: 0.95rem;
+  color: var(--text-strong);
 }
 
 .claim-card-desc {
   font-size: 0.85rem;
   color: var(--text-muted);
-  background: #12161c;
+  background: var(--bg-subtle);
   padding: 0.6rem 0.8rem;
   border-radius: var(--radius);
   margin-bottom: 0.6rem;
@@ -715,6 +863,9 @@ button, input, select, textarea {
 
 .admin-table-wrap {
   overflow-x: auto;
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius);
+  background-color: var(--bg-surface);
 }
 
 .data-table {
@@ -731,19 +882,24 @@ button, input, select, textarea {
 }
 
 .data-table th {
-  background-color: #141820;
+  background-color: var(--bg-subtle);
   color: var(--text-muted);
   font-weight: 600;
   font-size: 0.8rem;
 }
 
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
 .data-table tr:hover {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--bg-surface-hover);
 }
 
 .table-actions {
   display: flex;
   gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 /* Empty State */
@@ -770,12 +926,149 @@ button, input, select, textarea {
 }
 
 .modal-backdrop[hidden],
+.drawer-backdrop[hidden],
 .toast[hidden] {
   display: none !important;
 }
 
+/* ==========================================================================
+   Right Side Drawer (Detail Barang ala Google)
+   ========================================================================== */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 95;
+}
+
+.drawer-panel {
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  background-color: var(--bg-surface);
+  border-left: 1px solid var(--border-line);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.18s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.drawer-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-height: 100%;
+}
+
+.drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.drawer-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-strong);
+  line-height: 1.25;
+}
+
+.drawer-photo-wrap {
+  width: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border-line);
+  background-color: var(--bg-subtle);
+}
+
+.drawer-photo-wrap img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.drawer-photo-placeholder {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.drawer-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.drawer-category {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+.drawer-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-line);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.drawer-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.drawer-meta-label {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.drawer-meta-value {
+  font-size: 0.92rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.drawer-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-line);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .modal-card {
-  background-color: #171c24;
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-line);
   border-radius: var(--radius);
   width: 100%;
@@ -795,6 +1088,7 @@ button, input, select, textarea {
 .modal-title {
   font-size: 1.25rem;
   font-weight: 700;
+  color: var(--text-strong);
 }
 
 .modal-close {
@@ -807,7 +1101,15 @@ button, input, select, textarea {
 }
 
 .modal-close:hover {
-  color: #ffffff;
+  color: var(--text-strong);
+}
+
+.detail-box {
+  background-color: var(--bg-subtle);
+  border: 1px solid var(--border-line);
+  padding: 1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
 }
 
 /* ==========================================================================
@@ -818,20 +1120,20 @@ button, input, select, textarea {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  background-color: #1e293b;
-  color: #ffffff;
+  background-color: var(--toast-bg);
+  color: var(--toast-text);
   padding: 0.75rem 1.25rem;
   border-radius: var(--radius);
   border: 1px solid var(--border-line);
   font-size: 0.88rem;
   font-weight: 500;
   z-index: 200;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .toast.error {
-  background-color: #7f1d1d;
-  border-color: #ef4444;
+  background-color: #c8102e;
+  border-color: #a50d26;
+  color: #ffffff;
 }
 
 /* ==========================================================================
@@ -845,7 +1147,7 @@ button, input, select, textarea {
 
   .login-hero {
     flex: none;
-    padding: 2.5rem 1.5rem;
+    padding: 3.5rem 1.5rem 2.5rem;
   }
 
   .login-hero h1 {
@@ -853,10 +1155,11 @@ button, input, select, textarea {
   }
 
   .login-panel {
-    padding: 2rem 1.5rem;
+    padding: 2.5rem 1.5rem;
   }
 
-  .sidebar {
+  .sidebar,
+  .desktop-topbar {
     display: none;
   }
 
@@ -868,12 +1171,14 @@ button, input, select, textarea {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background-color: #12161c;
-    border-bottom: 1px solid var(--border-line);
-    padding: 0.85rem 1.25rem;
+    background-color: #c8102e;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    padding: 0.75rem 1rem;
     position: sticky;
     top: 0;
     z-index: 50;
+    gap: 0.5rem;
+    color: #ffffff;
   }
 
   .mobile-bar .brand {
@@ -883,35 +1188,55 @@ button, input, select, textarea {
 
   .mobile-nav {
     display: flex;
-    gap: 0.35rem;
+    gap: 0.3rem;
     align-items: center;
   }
 
   .mob-item {
-    padding: 0.35rem 0.65rem;
+    padding: 0.35rem 0.6rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.85);
     border-radius: var(--radius);
   }
 
   .mob-item.active {
     background-color: #ffffff;
-    color: #12161c;
+    color: #c8102e;
   }
 
   .mob-logout {
     background: none;
     border: none;
-    color: var(--color-red);
+    color: #ffe4e8;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    padding: 0.35rem 0.5rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  .mob-logout:hover {
+    color: #ffffff;
+  }
+
+  .mobile-bar .theme-toggle {
+    background-color: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+  }
+
+  .mobile-bar .theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.24);
+    color: #ffffff;
   }
 
   .main-content {
     padding: 1.5rem 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
   }
 
   .item-row {
@@ -920,8 +1245,8 @@ button, input, select, textarea {
   }
 
   .item-thumb {
-    width: 42px;
-    height: 42px;
-    font-size: 1.1rem;
+    width: 60px;
+    height: 60px;
+    font-size: 1.3rem;
   }
 }

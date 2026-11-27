@@ -20,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Salin seluruh kode backend dan frontend ke container
+# Salin seluruh kode backend, frontend, dan folder public ke container
 COPY backend/ ./backend/
 COPY frontend/ ./frontend/
+COPY public/ ./public/
 
 # Buka port aplikasi (default 5000)
 EXPOSE 5000

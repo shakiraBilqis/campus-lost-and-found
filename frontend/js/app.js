@@ -63,10 +63,32 @@ function closeModal() {
   $("#modal-content").innerHTML = "";
 }
 
-// Tutup modal jika klik backdrop di luar card
+function openDrawer(contentHtml) {
+  const backdrop = $("#drawer-backdrop");
+  const content = $("#drawer-content");
+  content.innerHTML = contentHtml;
+  backdrop.hidden = false;
+}
+
+function closeDrawer() {
+  const backdrop = $("#drawer-backdrop");
+  backdrop.hidden = true;
+  $("#drawer-content").innerHTML = "";
+}
+
+// Tutup modal atau drawer jika klik backdrop di luar panel, atau tekan Escape
 window.addEventListener("click", (e) => {
   if (e.target.id === "modal-container") {
     closeModal();
+  } else if (e.target.id === "drawer-backdrop") {
+    closeDrawer();
+  }
+});
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    if (!$("#modal-container").hidden) closeModal();
+    else if (!$("#drawer-backdrop").hidden) closeDrawer();
   }
 });
 
@@ -341,17 +363,16 @@ async function showItemDetail(itemId) {
       statusClass = "status-returned";
     }
 
-    const photoHtml = item.url_foto
-      ? `<div style="margin-bottom: 1.25rem; text-align: center;">
-           <img src="${escapeHtml(item.url_foto)}" alt="" style="max-width: 100%; max-height: 280px; border-radius: var(--radius); border: 1px solid var(--border-line);">
-         </div>`
-      : "";
+    const firstLetter = (item.judul || "?").charAt(0).toUpperCase();
+    const bgColor = getAvatarBgColor(item.judul);
 
-    const pelaporInfo = item.pelapor
-      ? `<div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
-           Dilaporkan oleh: <strong>${escapeHtml(item.pelapor.nama)}</strong> (${escapeHtml(item.pelapor.nim || "-")})
+    const photoHtml = item.url_foto
+      ? `<div class="drawer-photo-wrap">
+           <img src="${escapeHtml(item.url_foto)}" alt="${escapeHtml(item.judul)}">
          </div>`
-      : "";
+      : `<div class="drawer-photo-wrap">
+           <div class="drawer-photo-placeholder" style="background-color: ${bgColor};">${firstLetter}</div>
+         </div>`;
 
     let actionButtons = "";
     if (canClaim) {
@@ -369,43 +390,60 @@ async function showItemDetail(itemId) {
       `;
     }
 
-    const modalHtml = `
-      <div class="modal-header">
-        <h2 class="modal-title">${escapeHtml(item.judul)}</h2>
-        <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+    const drawerHtml = `
+      <div class="drawer-header">
+        <h2 class="drawer-title">${escapeHtml(item.judul)}</h2>
+        <button type="button" class="modal-close" onclick="closeDrawer()" aria-label="Tutup panel">&times;</button>
       </div>
+
       ${photoHtml}
-      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: center;">
+
+      <div class="drawer-badges">
         <span class="badge-type ${typeClass}">${typeLabel}</span>
         <div class="status-indicator ${statusClass}">
           <span class="status-dot"></span>
           <span>${statusLabel}</span>
         </div>
-        <span style="font-size: 0.82rem; color: var(--text-dim); margin-left: auto;">
-          Kategori: ${escapeHtml(item.kategori)}
-        </span>
-      </div>
-      <div style="background-color: #12161c; padding: 1rem; border-radius: var(--radius); margin-bottom: 1.25rem;">
-        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 0.35rem;">Deskripsi & Ciri:</div>
-        <p style="font-size: 0.95rem; line-height: 1.5;">${escapeHtml(item.deskripsi || "Tidak ada deskripsi.")}</p>
-        <div style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
-          Lokasi: <strong>${escapeHtml(item.lokasi)}</strong> &bull; Tanggal: ${formatDate(item.tanggal)}
-        </div>
-        ${pelaporInfo}
+        <span class="drawer-category">${escapeHtml(item.kategori)}</span>
       </div>
 
-      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-        <button type="button" class="btn btn-secondary" onclick="closeModal()">Tutup</button>
+      <div class="drawer-meta-list">
+        <div class="drawer-meta-row">
+          <span class="drawer-meta-label">Deskripsi &amp; Ciri Khas</span>
+          <span class="drawer-meta-value">${escapeHtml(item.deskripsi || "Tidak ada deskripsi tambahan.")}</span>
+        </div>
+        <div class="drawer-meta-row">
+          <span class="drawer-meta-label">Lokasi</span>
+          <span class="drawer-meta-value">${escapeHtml(item.lokasi)}</span>
+        </div>
+        <div class="drawer-meta-row">
+          <span class="drawer-meta-label">Tanggal</span>
+          <span class="drawer-meta-value">${formatDate(item.tanggal)}</span>
+        </div>
+        ${item.pelapor
+        ? `<div class="drawer-meta-row">
+                 <span class="drawer-meta-label">Dilaporkan oleh</span>
+                 <span class="drawer-meta-value">${escapeHtml(item.pelapor.nama)} (${escapeHtml(item.pelapor.nim || "-")})</span>
+               </div>`
+        : ""
+      }
+      </div>
+
+      <div class="drawer-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeDrawer()">Tutup</button>
         ${actionButtons}
       </div>
     `;
 
-    openModal(modalHtml);
+    openDrawer(drawerHtml);
 
-    // Bind event tombol aksi di modal
+    // Bind event tombol aksi di drawer
     const claimBtn = $("#btn-open-claim");
     if (claimBtn) {
-      claimBtn.addEventListener("click", () => openClaimForm(item));
+      claimBtn.addEventListener("click", () => {
+        closeDrawer();
+        openClaimForm(item);
+      });
     }
 
     const deleteBtn = $("#btn-delete-item");
@@ -415,7 +453,7 @@ async function showItemDetail(itemId) {
         try {
           await api.deleteItem(item.id);
           showToast("Laporan berhasil dihapus");
-          closeModal();
+          closeDrawer();
           loadItems();
         } catch (err) {
           showToast(err.message, true);
@@ -460,6 +498,7 @@ function openClaimForm(item) {
     try {
       await api.createClaim({
         id_barang: item.id,
+        id_pengklaim: currentUser.id,
         bukti_ciri: ciri,
       });
       showToast("Klaim berhasil diajukan! Menunggu verifikasi admin.");
@@ -471,7 +510,139 @@ function openClaimForm(item) {
   });
 }
 
-// ---------------------------------------------------------------- lapor barang form
+// ---------------------------------------------------------------- modal lapor barang cepat (popup dari Beranda)
+function openReportModal() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const catOptions = availableCategories
+    .map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)
+    .join("");
+
+  const modalHtml = `
+    <div class="modal-header">
+      <h2 class="modal-title">Lapor Barang</h2>
+      <button type="button" class="modal-close" onclick="closeModal()" aria-label="Tutup">&times;</button>
+    </div>
+    <form id="modal-report-form">
+      <div class="form-group">
+        <label>Jenis laporan</label>
+        <div class="segmented-control w-full" id="modal-tipe-segmented">
+          <button type="button" class="seg-btn active" data-val="found">Ditemukan</button>
+          <button type="button" class="seg-btn" data-val="lost">Hilang</button>
+        </div>
+        <input type="hidden" id="modal-report-tipe" value="found">
+      </div>
+
+      <div class="form-group">
+        <label for="modal-report-judul">Nama barang *</label>
+        <input type="text" id="modal-report-judul" required placeholder="Misal: Dompet Kulit Coklat, KTM a.n. Budi">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label for="modal-report-kategori">Kategori *</label>
+          <select id="modal-report-kategori" required>${catOptions}</select>
+        </div>
+        <div class="form-group flex-1">
+          <label for="modal-report-tanggal">Tanggal kejadian *</label>
+          <input type="date" id="modal-report-tanggal" value="${todayStr}" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-report-lokasi">Lokasi di kampus *</label>
+        <input type="text" id="modal-report-lokasi" required placeholder="Misal: Perpustakaan Lt. 2, Kantin Utama">
+      </div>
+
+      <div class="form-group">
+        <label for="modal-report-deskripsi">Deskripsi &amp; Ciri khas</label>
+        <textarea id="modal-report-deskripsi" rows="3" placeholder="Tuliskan warna, kondisi, atau ciri spesifik barang"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-photo-input">Foto barang (opsional)</label>
+        <div class="photo-upload-area">
+          <input type="file" id="modal-photo-input" accept="image/*">
+          <div class="photo-hint">Foto disimpan otomatis ke folder public/uploads dan dioptimalkan maks. 800px.</div>
+          <div id="modal-photo-preview-wrap" class="photo-preview-wrap" hidden>
+            <img id="modal-photo-preview-img" src="" alt="Pratinjau Foto">
+            <button type="button" id="modal-btn-remove-photo" class="btn btn-secondary btn-sm">Hapus foto</button>
+          </div>
+        </div>
+        <input type="hidden" id="modal-report-url-foto" value="">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.25rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">Batal</button>
+        <button type="submit" class="btn btn-primary">Publikasikan</button>
+      </div>
+    </form>
+  `;
+
+  openModal(modalHtml);
+
+  // Segmented toggle jenis laporan di modal
+  const seg = $("#modal-tipe-segmented");
+  seg.querySelectorAll(".seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      seg.querySelectorAll(".seg-btn").forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      $("#modal-report-tipe").value = btn.dataset.val;
+    });
+  });
+
+  // Upload & pratinjau foto di modal
+  const photoInput = $("#modal-photo-input");
+  const previewWrap = $("#modal-photo-preview-wrap");
+  const previewImg = $("#modal-photo-preview-img");
+  const urlFotoInput = $("#modal-report-url-foto");
+  const removeBtn = $("#modal-btn-remove-photo");
+
+  photoInput.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const base64Data = await compressAndConvertImage(file);
+      urlFotoInput.value = base64Data;
+      previewImg.src = base64Data;
+      previewWrap.hidden = false;
+    } catch (err) {
+      showToast("Gagal memproses gambar", true);
+    }
+  });
+
+  removeBtn.addEventListener("click", () => {
+    photoInput.value = "";
+    urlFotoInput.value = "";
+    previewImg.src = "";
+    previewWrap.hidden = true;
+  });
+
+  // Submit form modal
+  $("#modal-report-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const payload = {
+      tipe: $("#modal-report-tipe").value,
+      judul: $("#modal-report-judul").value.trim(),
+      kategori: $("#modal-report-kategori").value,
+      tanggal: $("#modal-report-tanggal").value,
+      lokasi: $("#modal-report-lokasi").value.trim(),
+      deskripsi: $("#modal-report-deskripsi").value.trim(),
+      url_foto: urlFotoInput.value,
+      id_pelapor: currentUser.id,
+    };
+
+    try {
+      await api.createItem(payload);
+      showToast("Laporan berhasil dipublikasikan!");
+      closeModal();
+      loadItems();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
+}
+
+// ---------------------------------------------------------------- lapor barang form (halaman #lapor)
 async function initReportForm() {
   const select = $("#report-kategori");
   if (select.children.length <= 1) {
@@ -587,13 +758,12 @@ async function loadUserActivity() {
                 <strong>Ciri khas yang kamu sebutkan:</strong><br>
                 ${escapeHtml(claim.bukti_ciri)}
               </div>
-              ${
-                claim.status === "pending" || claim.status === "menunggu"
-                  ? `<div style="text-align: right;">
+              ${claim.status === "pending" || claim.status === "menunggu"
+              ? `<div style="text-align: right;">
                        <button type="button" class="btn btn-secondary btn-sm" onclick="cancelClaim(${claim.id})">Batalkan klaim</button>
                      </div>`
-                  : ""
-              }
+              : ""
+            }
             </div>
           `;
         })
@@ -705,42 +875,40 @@ async function loadAdminClaims(statusFilter = "") {
         </thead>
         <tbody>
           ${claims
-            .map((c) => {
-              const isPending =
-                c.status === "pending" || c.status === "menunggu";
-              const bJudul = c.barang ? c.barang.judul : "-";
-              const pNama = c.pengklaim ? `${c.pengklaim.nama} (${c.pengklaim.nim || "-"})` : "-";
+        .map((c) => {
+          const isPending =
+            c.status === "pending" || c.status === "menunggu";
+          const bJudul = c.barang ? c.barang.judul : "-";
+          const pNama = c.pengklaim ? `${c.pengklaim.nama} (${c.pengklaim.nim || "-"})` : "-";
 
-              return `
+          return `
                 <tr>
                   <td><strong>${escapeHtml(bJudul)}</strong></td>
                   <td>${escapeHtml(pNama)}</td>
                   <td style="max-width: 250px;">${escapeHtml(c.bukti_ciri)}</td>
                   <td>
-                    <span style="font-weight: 600; color: ${
-                      isPending
-                        ? "var(--color-yellow)"
-                        : c.status === "approved" || c.status === "disetujui"
-                        ? "var(--color-green)"
-                        : "var(--color-grey)"
-                    };">
+                    <span style="font-weight: 600; color: ${isPending
+              ? "var(--color-yellow)"
+              : c.status === "approved" || c.status === "disetujui"
+                ? "var(--color-green)"
+                : "var(--color-grey)"
+            };">
                       ${escapeHtml(c.status)}
                     </span>
                   </td>
                   <td>
-                    ${
-                      isPending
-                        ? `<div class="table-actions">
+                    ${isPending
+              ? `<div class="table-actions">
                              <button type="button" class="btn btn-primary btn-sm" onclick="verifyAdminClaim(${c.id}, 'approved')">Setujui</button>
                              <button type="button" class="btn btn-secondary btn-sm" onclick="verifyAdminClaim(${c.id}, 'rejected')">Tolak</button>
                            </div>`
-                        : `<span style="color: var(--text-dim); font-size: 0.8rem;">Selesai</span>`
-                    }
+              : `<span style="color: var(--text-dim); font-size: 0.8rem;">Selesai</span>`
+            }
                   </td>
                 </tr>
               `;
-            })
-            .join("")}
+        })
+        .join("")}
         </tbody>
       </table>
     `;
@@ -782,9 +950,9 @@ async function loadAdminItems() {
         </thead>
         <tbody>
           ${items
-            .map((item) => {
-              const pelaporNama = item.pelapor ? item.pelapor.nama : "-";
-              return `
+        .map((item) => {
+          const pelaporNama = item.pelapor ? item.pelapor.nama : "-";
+          return `
                 <tr>
                   <td><strong>${escapeHtml(item.judul)}</strong><br><small style="color: var(--text-dim);">${escapeHtml(item.lokasi)}</small></td>
                   <td><span class="badge-type ${item.tipe}">${item.tipe === "lost" ? "Hilang" : "Ditemukan"}</span></td>
@@ -796,8 +964,8 @@ async function loadAdminItems() {
                   </td>
                 </tr>
               `;
-            })
-            .join("")}
+        })
+        .join("")}
         </tbody>
       </table>
     `;
@@ -836,8 +1004,8 @@ async function loadAdminUsers() {
         </thead>
         <tbody>
           ${users
-            .map((u) => {
-              return `
+        .map((u) => {
+          return `
                 <tr>
                   <td><strong>${escapeHtml(u.nama)}</strong></td>
                   <td>${escapeHtml(u.nim || "-")}</td>
@@ -846,17 +1014,16 @@ async function loadAdminUsers() {
                   <td>
                     <div class="table-actions">
                       <button type="button" class="btn btn-secondary btn-sm" onclick="openEditUserModal(${u.id})">Ubah</button>
-                      ${
-                        u.email !== "admin.lostfound@telkomuniversity.ac.id"
-                          ? `<button type="button" class="btn btn-danger btn-sm" onclick="adminDeleteUser(${u.id})">Hapus</button>`
-                          : ""
-                      }
+                      ${u.email !== "admin.lostfound@telkomuniversity.ac.id"
+              ? `<button type="button" class="btn btn-danger btn-sm" onclick="adminDeleteUser(${u.id})">Hapus</button>`
+              : ""
+            }
                     </div>
                   </td>
                 </tr>
               `;
-            })
-            .join("")}
+        })
+        .join("")}
         </tbody>
       </table>
     `;
@@ -925,8 +1092,39 @@ function openEditUserModal(userId) {
   });
 }
 
+// ---------------------------------------------------------------- tema (dark / light mode)
+const SUN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
+const MOON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`;
+
+function getCurrentTheme() {
+  return document.documentElement.getAttribute("data-theme") || "dark";
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("lf_theme", theme);
+  const isDark = theme === "dark";
+  const label = isDark ? "Mode terang" : "Mode gelap";
+  const icon = isDark ? SUN_ICON : MOON_ICON;
+  $$("[data-theme-toggle]").forEach((btn) => {
+    btn.innerHTML = `${icon}<span class="theme-label">${label}</span>`;
+    btn.setAttribute("aria-label", `Beralih ke ${label.toLowerCase()}`);
+    btn.setAttribute("title", `Beralih ke ${label.toLowerCase()}`);
+  });
+}
+
+function initTheme() {
+  applyTheme(getCurrentTheme());
+  $$("[data-theme-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyTheme(getCurrentTheme() === "dark" ? "light" : "dark");
+    });
+  });
+}
+
 // ---------------------------------------------------------------- inisialisasi awal event listeners
 document.addEventListener("DOMContentLoaded", async () => {
+  initTheme();
   // Load config & categories
   try {
     const conf = await api.config();
@@ -982,7 +1180,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   const mobLogoutBtn = $("#mob-logout-btn");
   if (mobLogoutBtn) mobLogoutBtn.addEventListener("click", logout);
 
-  // 3. Search & Filter Input di Beranda
+  // 3. Tombol Lapor Barang cepat di Beranda (Popup Modal)
+  const quickReportBtn = $("#btn-quick-report");
+  if (quickReportBtn) {
+    quickReportBtn.addEventListener("click", openReportModal);
+  }
+
+  // 4. Search & Filter Input di Beranda
   const searchInput = $("#search-input");
   if (searchInput) {
     let debounceTimer;

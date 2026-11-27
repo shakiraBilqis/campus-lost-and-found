@@ -1,24 +1,43 @@
 <!doctype html>
 <html lang="id">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lost &amp; Found Telkom University</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    (function () {
+      var saved = localStorage.getItem("lf_theme");
+      var theme = saved || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
 </head>
+
 <body>
 
   <!-- Toast Notification -->
   <div id="toast" class="toast" hidden></div>
 
-  <!-- Modal Container -->
+  <!-- Modal Container (untuk form) -->
   <div id="modal-container" class="modal-backdrop" hidden>
     <div class="modal-card" id="modal-content">
       <!-- Diisi secara dinamis via JavaScript -->
     </div>
+  </div>
+
+  <!-- Right Side Drawer (untuk detail barang ala Google) -->
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden>
+    <aside id="item-drawer" class="drawer-panel" role="dialog" aria-modal="true" aria-label="Detail barang">
+      <div id="drawer-content" class="drawer-content">
+        <!-- Diisi secara dinamis via JavaScript -->
+      </div>
+    </aside>
   </div>
 
   <!-- ==================== HALAMAN LOGIN ==================== -->
@@ -26,11 +45,15 @@
     <div class="login-hero">
       <div class="hero-content">
         <h1>Barang hilang di kampus? Cek di sini dulu.</h1>
-        <p class="hero-desc">Pasang foto dan lokasi barang yang hilang atau kamu temukan. Laporan langsung tayang, pemilik bisa langsung klaim.</p>
+        <p class="hero-desc">Pasang foto dan lokasi barang yang hilang atau kamu temukan. Laporan langsung tayang,
+          pemilik bisa langsung klaim.</p>
       </div>
     </div>
 
     <div class="login-panel">
+      <div class="login-topbar">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Ganti tema"></button>
+      </div>
       <div class="login-box">
         <h2 class="login-title">Masuk</h2>
         <p class="login-subtitle">Pakai email kampus (@student.telkomuniversity.ac.id atau @telkomuniversity.ac.id).</p>
@@ -38,10 +61,8 @@
         <form id="login-form" class="form-stack">
           <div class="form-group">
             <label for="login-email">Email kampus</label>
-            <input type="email" id="login-email" name="email" required
-                   placeholder="budi@student.telkomuniversity.ac.id"
-                   value="budi@student.telkomuniversity.ac.id"
-                   autocomplete="email">
+            <input type="email" id="login-email" name="email" required placeholder="budi@student.telkomuniversity.ac.id"
+              value="budi@student.telkomuniversity.ac.id" autocomplete="email">
           </div>
           <button type="submit" class="btn btn-primary btn-block">Masuk</button>
         </form>
@@ -66,9 +87,6 @@
         <nav class="nav-menu">
           <a href="#beranda" class="nav-item active" data-page="beranda">
             <span class="nav-label">Beranda</span>
-          </a>
-          <a href="#lapor" class="nav-item" data-page="lapor">
-            <span class="nav-label">Lapor barang</span>
           </a>
           <a href="#aktivitas" class="nav-item" data-page="aktivitas">
             <span class="nav-label">Aktivitas saya</span>
@@ -95,21 +113,27 @@
       </div>
       <nav class="mobile-nav">
         <a href="#beranda" class="mob-item active" data-page="beranda">Beranda</a>
-        <a href="#lapor" class="mob-item" data-page="lapor">Lapor</a>
         <a href="#aktivitas" class="mob-item" data-page="aktivitas">Aktivitas</a>
         <a href="#admin" class="mob-item admin-only" data-page="admin" hidden>Admin</a>
+        <button type="button" class="theme-toggle theme-toggle-icon" data-theme-toggle aria-label="Ganti tema"></button>
         <button type="button" id="mob-logout-btn" class="mob-logout">Keluar</button>
       </nav>
     </header>
 
     <!-- Konten Utama -->
     <main class="main-content">
+      <div class="desktop-topbar">
+        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Ganti tema"></button>
+      </div>
 
       <!-- ================= HALAMAN: BERANDA ================= -->
       <section id="page-beranda" class="page-section">
-        <div class="page-header">
-          <h1 id="greeting-heading">Halo, Budi</h1>
-          <p class="page-sub">Barang hilang dan temuan di sekitar kampus.</p>
+        <div class="page-header page-header-row">
+          <div>
+            <h1 id="greeting-heading">Halo, Budi</h1>
+            <p class="page-sub">Barang hilang dan temuan di sekitar kampus.</p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-quick-report">Lapor barang</button>
         </div>
 
         <!-- Filter & Search Toolbar -->
@@ -159,7 +183,8 @@
 
             <div class="form-group">
               <label for="report-judul">Nama barang</label>
-              <input type="text" id="report-judul" name="judul" required placeholder="Misal: Dompet Kulit Coklat, KTM a.n. Budi">
+              <input type="text" id="report-judul" name="judul" required
+                placeholder="Misal: Dompet Kulit Coklat, KTM a.n. Budi">
             </div>
 
             <div class="form-row">
@@ -177,12 +202,14 @@
 
             <div class="form-group">
               <label for="report-lokasi">Lokasi di kampus</label>
-              <input type="text" id="report-lokasi" name="lokasi" required placeholder="Misal: Perpustakaan Lt. 2, Kantin Utama, Lapangan Basket">
+              <input type="text" id="report-lokasi" name="lokasi" required
+                placeholder="Misal: Perpustakaan Lt. 2, Kantin Utama, Lapangan Basket">
             </div>
 
             <div class="form-group">
               <label for="report-deskripsi">Deskripsi &amp; Ciri khas</label>
-              <textarea id="report-deskripsi" name="deskripsi" rows="3" placeholder="Tuliskan warna, kondisi, ciri spesifik untuk memudahkan verifikasi"></textarea>
+              <textarea id="report-deskripsi" name="deskripsi" rows="3"
+                placeholder="Tuliskan warna, kondisi, ciri spesifik untuk memudahkan verifikasi"></textarea>
             </div>
 
             <div class="form-group">
@@ -213,8 +240,10 @@
         </div>
 
         <div class="subtabs">
-          <button type="button" class="subtab-btn active" data-subtab="my-items">Laporan Saya (<span id="my-items-count">0</span>)</button>
-          <button type="button" class="subtab-btn" data-subtab="my-claims">Klaim Saya (<span id="my-claims-count">0</span>)</button>
+          <button type="button" class="subtab-btn active" data-subtab="my-items">Laporan Saya (<span
+              id="my-items-count">0</span>)</button>
+          <button type="button" class="subtab-btn" data-subtab="my-claims">Klaim Saya (<span
+              id="my-claims-count">0</span>)</button>
         </div>
 
         <!-- Subtab 1: Laporan Saya -->
@@ -285,4 +314,5 @@
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

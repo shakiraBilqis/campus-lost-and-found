@@ -4,9 +4,12 @@ Arsitektur tanpa database: data tersimpan di memori (backend/data.py).
 Mendukung otorisasi sederhana via header X-User-Id, CORS, limit payload, dan health check.
 """
 
+import base64
 from datetime import date
 import json
 import os
+import re
+import uuid
 
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
@@ -30,6 +33,11 @@ else:
 FRONTEND_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "..", "frontend"
 )
+PUBLIC_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "public"
+)
+UPLOAD_DIR = os.path.join(PUBLIC_DIR, "uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_DOMAINS = [
     "student.telkomuniversity.ac.id",
@@ -53,6 +61,27 @@ def find(collection, item_id):
 
 def error(message, status_code=400):
     return jsonify({"error": message}), status_code
+
+
+def save_uploaded_photo(url_foto):
+    """Jika url_foto berupa data URL base64, simpan ke folder public/uploads dan kembalikan path publiknya."""
+    if not url_foto or not isinstance(url_foto, str):
+        return ""
+    match = re.match(r"^data:image/(png|jpeg|jpg|webp);base64,(.+)$", url_foto.strip(), re.IGNORECASE)
+    if not match:
+        return url_foto.strip()
+    ext = match.group(1).lower()
+    if ext == "jpeg":
+        ext = "jpg"
+    try:
+        img_bytes = base64.b64decode(match.group(2))
+    except Exception:
+        return ""
+    filename = f"item_{uuid.uuid4().hex[:12]}.{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    with open(filepath, "wb") as f:
+        f.write(img_bytes)
+    return f"public/uploads/{filename}"
 
 
 def get_current_user():
@@ -444,6 +473,7 @@ def create_item():
 
     # Normalisasi tipe ke 'lost' / 'found'
     norm_tipe = "lost" if tipe in ("lost", "hilang") else "found"
+    saved_photo = save_uploaded_photo(body.get("url_foto", ""))
 
     item = {
         "id": next_id(data.items),
@@ -456,7 +486,7 @@ def create_item():
         "tanggal": tanggal,
         "tipe": norm_tipe,
         "status": "open",  # Laporan baru langsung open (Tersedia)
-        "url_foto": body.get("url_foto", ""),  # Data URL base64
+        "url_foto": saved_photo,
         "id_pelapor": pelapor["id"],
     }
     data.items.append(item)
@@ -480,9 +510,11 @@ def update_item(item_id):
         )
 
     body = request.get_json(silent=True) or {}
-    for key in ("judul", "kategori", "deskripsi", "lokasi", "tanggal", "url_foto"):
+    for key in ("judul", "kategori", "deskripsi", "lokasi", "tanggal"):
         if key in body:
             item[key] = body[key]
+    if "url_foto" in body:
+        item["url_foto"] = save_uploaded_photo(body["url_foto"])
 
     if "tipe" in body:
         t = str(body["tipe"]).lower()
@@ -710,10 +742,15 @@ def delete_claim(claim_id):
     return jsonify({"message": "Klaim berhasil dibatalkan"}), 200
 
 
-# ---------------------------------------------------------------- penyajian frontend statis
+# ---------------------------------------------------------------- penyajian frontend statis & public uploads
 @app.get("/")
 def serve_index():
     return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@app.get("/public/<path:path>")
+def serve_public(path):
+    return send_from_directory(PUBLIC_DIR, path)
 
 
 @app.get("/<path:path>")
