@@ -5,6 +5,7 @@
 
 let currentUser = null;
 let currentItems = [];
+let currentMyItems = [];
 let currentMyClaims = [];
 let currentDrawerItemId = null;
 let availableCategories = [
@@ -90,7 +91,9 @@ const I18N = {
     btn_open_my_claims: "Buka Klaim Saya",
     claim_detail_title: "Detail Pengambilan Barang",
     claim_pickup_ready: "Disetujui — Siap Diambil",
-    claim_no_loc: "Silakan menuju Pos Satpam Gerbang Utama atau hubungi admin.",
+    claim_no_loc: "Pusat Pos Satpam Telkom University (Gerbang Utama)",
+    toast_published_found:
+      "Laporan dipublikasikan! Harap segera bawa barang temuan ke Pusat Pos Satpam Telkom University (Gerbang Utama).",
     approve_modal_title: "Setujui Klaim & Lokasi Pengambilan",
     approve_modal_sub:
       "Masukkan deskripsi pos satpam tempat mahasiswa dapat mengambil barang:",
@@ -118,6 +121,9 @@ const I18N = {
     report_desc_ph:
       "Tuliskan warna, kondisi, ciri spesifik untuk memudahkan verifikasi",
     report_photo_label: "Foto barang (opsional)",
+    report_photo_required_label: "Foto barang * (wajib untuk barang ditemukan)",
+    report_photo_optional_label: "Foto barang (opsional untuk barang hilang)",
+    toast_photo_required_found: "Foto barang wajib diunggah untuk laporan barang ditemukan",
     report_photo_hint:
       "Ukuran otomatis dioptimalkan (maks. 800px JPEG) sebelum dikirim.",
     report_photo_modal_hint:
@@ -170,6 +176,7 @@ const I18N = {
     th_type: "Tipe",
     th_category: "Kategori",
     th_reporter: "Pelapor",
+    th_dropoff: "Info Setor",
     th_name: "Nama",
     th_nim: "NIM",
     th_email: "Email",
@@ -177,6 +184,20 @@ const I18N = {
     btn_approve: "Setujui",
     btn_reject: "Tolak",
     btn_takedown_short: "Turunkan",
+    btn_set_dropoff: "Beri Info Setor",
+    btn_edit_dropoff: "Ubah Info Setor",
+    dropoff_modal_title: "Instruksi Penyetoran Barang",
+    dropoff_modal_sub:
+      "Tentukan pos satpam atau lokasi tempat pelapor harus menyetorkan barang:",
+    dropoff_label: "Lokasi Pos Satpam / Instruksi Setor *",
+    dropoff_ph:
+      "Misal: Harap setorkan ke Pos Satpam Gerbang Utama paling lambat pukul 17.00",
+    toast_dropoff_saved: "Instruksi setor barang berhasil dikirim ke pelapor!",
+    item_dropoff_pill: "Info Setor dari Admin",
+    btn_view_dropoff: "Lihat info setor",
+    notif_dropoff_banner:
+      "Admin telah mengirimkan instruksi tempat setor barang untuk laporan Anda!",
+    btn_open_my_reports: "Buka Laporan Saya",
     label_done: "Selesai",
     confirm_approve: "Konfirmasi menyetujui klaim ini?",
     confirm_reject: "Konfirmasi menolak klaim ini?",
@@ -269,7 +290,9 @@ const I18N = {
     btn_open_my_claims: "Open My Claims",
     claim_detail_title: "Item Pickup Details",
     claim_pickup_ready: "Approved — Ready for Pickup",
-    claim_no_loc: "Please visit the Main Gate Security Post or contact admin.",
+    claim_no_loc: "Telkom University Central Security Post (Main Gate)",
+    toast_published_found:
+      "Report published! Please bring the found item to the Telkom University Central Security Post (Main Gate).",
     approve_modal_title: "Approve Claim & Pickup Location",
     approve_modal_sub:
       "Enter the security post location where the student can pick up the item:",
@@ -297,6 +320,9 @@ const I18N = {
     report_desc_ph:
       "Write color, condition, or specific traits to help verification",
     report_photo_label: "Item photo (optional)",
+    report_photo_required_label: "Item photo * (required for found items)",
+    report_photo_optional_label: "Item photo (optional for lost items)",
+    toast_photo_required_found: "Item photo is required when reporting a found item",
     report_photo_hint:
       "Automatically optimized (max 800px JPEG) before sending.",
     report_photo_modal_hint:
@@ -348,6 +374,7 @@ const I18N = {
     th_type: "Type",
     th_category: "Category",
     th_reporter: "Reporter",
+    th_dropoff: "Drop-off Info",
     th_name: "Name",
     th_nim: "Student ID",
     th_email: "Email",
@@ -355,6 +382,20 @@ const I18N = {
     btn_approve: "Approve",
     btn_reject: "Reject",
     btn_takedown_short: "Remove",
+    btn_set_dropoff: "Set Drop-off",
+    btn_edit_dropoff: "Edit Drop-off",
+    dropoff_modal_title: "Item Drop-off Instruction",
+    dropoff_modal_sub:
+      "Specify the security post or location where the reporter must drop off the item:",
+    dropoff_label: "Security Post Location / Drop-off Instruction *",
+    dropoff_ph:
+      "e.g., Please drop off at the Main Gate Security Post before 5:00 PM",
+    toast_dropoff_saved: "Drop-off instruction sent to the reporter!",
+    item_dropoff_pill: "Drop-off Info from Admin",
+    btn_view_dropoff: "View drop-off info",
+    notif_dropoff_banner:
+      "Admin has sent drop-off instructions for your reported item!",
+    btn_open_my_reports: "Open My Reports",
     label_done: "Done",
     confirm_approve: "Confirm approving this claim?",
     confirm_reject: "Confirm rejecting this claim?",
@@ -1029,7 +1070,7 @@ function openReportModal() {
       </div>
 
       <div class="form-group">
-        <label for="modal-photo-input">${escapeHtml(t("report_photo_label"))}</label>
+        <label for="modal-photo-input" id="modal-photo-label">${escapeHtml(t("report_photo_required_label"))}</label>
         <div class="photo-upload-area">
           <input type="file" id="modal-photo-input" accept="image/*">
           <div class="photo-hint">${escapeHtml(t("report_photo_modal_hint"))}</div>
@@ -1056,6 +1097,13 @@ function openReportModal() {
       seg.querySelectorAll(".seg-btn").forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       $("#modal-report-tipe").value = btn.dataset.val;
+      const photoLbl = $("#modal-photo-label");
+      if (photoLbl) {
+        photoLbl.textContent =
+          btn.dataset.val === "found"
+            ? t("report_photo_required_label")
+            : t("report_photo_optional_label");
+      }
     });
   });
 
@@ -1087,8 +1135,14 @@ function openReportModal() {
 
   $("#modal-report-form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const tipeVal = $("#modal-report-tipe").value;
+    if (tipeVal === "found" && !urlFotoInput.value) {
+      showToast(t("toast_photo_required_found"), true);
+      return;
+    }
+
     const payload = {
-      tipe: $("#modal-report-tipe").value,
+      tipe: tipeVal,
       judul: $("#modal-report-judul").value.trim(),
       kategori: $("#modal-report-kategori").value,
       tanggal: $("#modal-report-tanggal").value,
@@ -1100,9 +1154,12 @@ function openReportModal() {
 
     try {
       await api.createItem(payload);
-      showToast(t("toast_published"));
+      showToast(
+        tipeVal === "found" ? t("toast_published_found") : t("toast_published")
+      );
       closeModal();
       loadItems();
+      refreshActivityNotifications();
     } catch (err) {
       showToast(err.message, true);
     }
@@ -1149,6 +1206,15 @@ function getSeenClaimIds() {
   }
 }
 
+function getSeenDropoffIds() {
+  if (!currentUser) return [];
+  try {
+    return JSON.parse(localStorage.getItem(`lf_seen_dropoffs_${currentUser.id}`) || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
 function markClaimSeen(claimId) {
   if (!currentUser) return;
   const seen = getSeenClaimIds();
@@ -1156,33 +1222,62 @@ function markClaimSeen(claimId) {
     seen.push(claimId);
     localStorage.setItem(`lf_seen_claims_${currentUser.id}`, JSON.stringify(seen));
   }
-  updateNotifBadges(currentMyClaims);
+  updateNotifBadges(currentMyClaims, currentMyItems);
 }
 
-function updateNotifBadges(claims) {
-  const seen = getSeenClaimIds();
+function markDropoffSeen(itemId) {
+  if (!currentUser) return;
+  const seen = getSeenDropoffIds();
+  if (!seen.includes(itemId)) {
+    seen.push(itemId);
+    localStorage.setItem(`lf_seen_dropoffs_${currentUser.id}`, JSON.stringify(seen));
+  }
+  updateNotifBadges(currentMyClaims, currentMyItems);
+}
+
+function updateNotifBadges(claims, items = []) {
+  const seenClaims = getSeenClaimIds();
   const approvedClaims = (claims || []).filter(
     (c) => c.status === "approved" || c.status === "disetujui"
   );
-  const unreadCount = approvedClaims.filter((c) => !seen.includes(c.id)).length;
+  const unreadClaims = approvedClaims.filter((c) => !seenClaims.includes(c.id)).length;
+
+  const seenDropoffs = getSeenDropoffIds();
+  const dropoffItems = (items || []).filter(
+    (i) => i.lokasi_setor && i.lokasi_setor.trim() !== ""
+  );
+  const unreadDropoffs = dropoffItems.filter((i) => !seenDropoffs.includes(i.id)).length;
+
+  const totalUnread = unreadClaims + unreadDropoffs;
 
   $$(".activity-notif-badge").forEach((badge) => {
-    badge.textContent = unreadCount;
-    badge.hidden = unreadCount === 0;
+    badge.textContent = totalUnread;
+    badge.hidden = totalUnread === 0;
   });
 
   const banner = $("#activity-notif-banner");
   if (banner) {
-    if (unreadCount > 0) {
+    if (unreadClaims > 0 || unreadDropoffs > 0) {
       banner.hidden = false;
+      const msg =
+        unreadDropoffs > 0 && unreadClaims === 0
+          ? t("notif_dropoff_banner")
+          : t("notif_approved_banner");
+      const btnText =
+        unreadDropoffs > 0 && unreadClaims === 0
+          ? t("btn_open_my_reports")
+          : t("btn_open_my_claims");
+      const targetTab =
+        unreadDropoffs > 0 && unreadClaims === 0 ? "my-items" : "my-claims";
+
       banner.innerHTML = `
-        <span><strong>${escapeHtml(t("notif_approved_banner"))}</strong></span>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-jump-my-claims">${escapeHtml(t("btn_open_my_claims"))}</button>
+        <span><strong>${escapeHtml(msg)}</strong></span>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-jump-notif">${escapeHtml(btnText)}</button>
       `;
-      const jumpBtn = $("#btn-jump-my-claims");
+      const jumpBtn = $("#btn-jump-notif");
       if (jumpBtn) {
         jumpBtn.addEventListener("click", () => {
-          const tabBtn = $(`#page-aktivitas .subtab-btn[data-subtab="my-claims"]`);
+          const tabBtn = $(`#page-aktivitas .subtab-btn[data-subtab="${targetTab}"]`);
           if (tabBtn) tabBtn.click();
         });
       }
@@ -1197,8 +1292,9 @@ async function refreshActivityNotifications() {
   if (!currentUser) return;
   try {
     const act = await api.activity(currentUser.id);
+    currentMyItems = act.laporan || [];
     currentMyClaims = act.klaim || [];
-    updateNotifBadges(currentMyClaims);
+    updateNotifBadges(currentMyClaims, currentMyItems);
   } catch (e) {
     // Abaikan error background notification
   }
@@ -1209,8 +1305,9 @@ async function loadUserActivity() {
   if (!currentUser) return;
   try {
     const act = await api.activity(currentUser.id);
+    currentMyItems = act.laporan || [];
     currentMyClaims = act.klaim || [];
-    updateNotifBadges(currentMyClaims);
+    updateNotifBadges(currentMyClaims, currentMyItems);
 
     $("#my-items-count").textContent = act.laporan ? act.laporan.length : 0;
     const itemsContainer = $("#my-items-list");
@@ -1257,7 +1354,12 @@ async function loadUserActivity() {
                   <span class="status-dot"></span>
                   <span>${statusLabel}</span>
                 </div>
-                <div style="margin-top: 0.4rem; display: flex; gap: 0.4rem;">
+                <div style="margin-top: 0.4rem; display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: flex-end;">
+                  ${
+                    item.lokasi_setor
+                      ? `<button type="button" class="btn btn-primary btn-sm" onclick="openDropoffDetailModal(${item.id})">${escapeHtml(t("btn_view_dropoff"))}</button>`
+                      : ""
+                  }
                   <button type="button" class="btn btn-secondary btn-sm" onclick="openEditItemModal(${item.id})">${escapeHtml(t("btn_edit"))}</button>
                   <button type="button" class="btn btn-danger btn-sm" onclick="deleteMyItem(${item.id})">${escapeHtml(t("btn_delete"))}</button>
                 </div>
@@ -1390,6 +1492,42 @@ function openClaimDetailModal(claimId) {
       </div>
       <div style="font-size: 0.9rem;">
         ${escapeHtml(claim.bukti_ciri)}
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end;">
+      <button type="button" class="btn btn-primary" onclick="closeModal()">${escapeHtml(t("btn_close"))}</button>
+    </div>
+  `;
+
+  openModal(modalHtml);
+}
+
+function openDropoffDetailModal(itemId) {
+  const item = currentMyItems.find((i) => i.id === itemId);
+  if (!item) return;
+
+  markDropoffSeen(itemId);
+
+  const modalHtml = `
+    <div class="modal-header">
+      <h2 class="modal-title">${escapeHtml(t("dropoff_modal_title"))}</h2>
+      <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+      <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-strong); margin-bottom: 0.35rem;">
+        ${escapeHtml(item.judul)}
+      </div>
+      <span class="claim-approved-pill">● ${escapeHtml(t("item_dropoff_pill"))}</span>
+    </div>
+
+    <div class="pickup-highlight-box">
+      <div style="font-size: 0.8rem; font-weight: 700; color: var(--color-green); margin-bottom: 0.25rem;">
+        ${escapeHtml(t("dropoff_label").replace(" *", ""))}
+      </div>
+      <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-strong); line-height: 1.45;">
+        ${escapeHtml(item.lokasi_setor)}
       </div>
     </div>
 
@@ -1633,16 +1771,12 @@ async function loadAdminClaims(statusFilter = "") {
 }
 
 async function verifyAdminClaim(claimId, status) {
-  if (status === "approved") {
-    openApproveClaimModal(claimId);
-    return;
-  }
-
-  if (!confirm(t("confirm_reject"))) return;
+  const msg = status === "approved" ? t("confirm_approve") : t("confirm_reject");
+  if (!confirm(msg)) return;
 
   try {
-    await api.verifyClaim(claimId, "rejected");
-    showToast(t("toast_claim_rejected"));
+    await api.verifyClaim(claimId, status);
+    showToast(status === "approved" ? t("toast_claim_approved") : t("toast_claim_rejected"));
     loadAdminStats();
     loadAdminClaims();
     loadItems();
@@ -1706,6 +1840,7 @@ async function loadAdminItems() {
             <th>${escapeHtml(t("th_type"))}</th>
             <th>${escapeHtml(t("th_category"))}</th>
             <th>${escapeHtml(t("th_reporter"))}</th>
+            <th>${escapeHtml(t("th_dropoff"))}</th>
             <th>${escapeHtml(t("th_status"))}</th>
             <th>${escapeHtml(t("th_action"))}</th>
           </tr>
@@ -1719,12 +1854,17 @@ async function loadAdminItems() {
           if (item.status === "claimed" || item.status === "diklaim") stLabel = t("status_claimed");
           else if (item.status === "returned" || item.status === "dikembalikan") stLabel = t("status_returned");
 
+          const dropoffCell = item.lokasi_setor
+            ? `<span style="color: var(--color-green); font-size: 0.82rem; font-weight: 600;">${escapeHtml(item.lokasi_setor)}</span>`
+            : `<span style="color: var(--text-dim); font-size: 0.8rem;">-</span>`;
+
           return `
                 <tr>
                   <td><strong>${escapeHtml(item.judul)}</strong><br><small style="color: var(--text-dim);">${escapeHtml(item.lokasi)}</small></td>
                   <td><span class="badge-type ${isLost ? "lost" : "found"}">${escapeHtml(isLost ? t("type_lost") : t("type_found"))}</span></td>
                   <td>${escapeHtml(tCat(item.kategori))}</td>
                   <td>${escapeHtml(pelaporNama)}</td>
+                  <td style="max-width: 200px;">${dropoffCell}</td>
                   <td>${escapeHtml(stLabel)}</td>
                   <td>
                     <button type="button" class="btn btn-danger btn-sm" onclick="adminDeleteItem(${item.id})">${escapeHtml(t("btn_takedown_short"))}</button>
@@ -1739,6 +1879,59 @@ async function loadAdminItems() {
   } catch (err) {
     showToast(err.message, true);
   }
+}
+
+async function openAdminDropoffModal(itemId) {
+  let item;
+  try {
+    item = await api.getItem(itemId);
+  } catch (err) {
+    showToast(err.message, true);
+    return;
+  }
+
+  const modalHtml = `
+    <div class="modal-header">
+      <h2 class="modal-title">${escapeHtml(t("dropoff_modal_title"))}</h2>
+      <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+      ${escapeHtml(t("dropoff_modal_sub"))}<br>
+      <strong>${escapeHtml(item.judul)}</strong> (${escapeHtml(item.pelapor ? item.pelapor.nama : "-")})
+    </p>
+    <form id="admin-dropoff-form">
+      <div class="form-group">
+        <label for="admin-lokasi-setor">${escapeHtml(t("dropoff_label"))}</label>
+        <textarea id="admin-lokasi-setor" rows="3" required
+          placeholder="${escapeHtml(t("dropoff_ph"))}">${escapeHtml(item.lokasi_setor || "")}</textarea>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem;">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">${escapeHtml(t("btn_cancel"))}</button>
+        <button type="submit" class="btn btn-primary">${escapeHtml(t("btn_save"))}</button>
+      </div>
+    </form>
+  `;
+
+  openModal(modalHtml);
+
+  $("#admin-dropoff-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const lokasiSetor = $("#admin-lokasi-setor").value.trim();
+    if (!lokasiSetor) return;
+
+    try {
+      await api.updateItem(itemId, {
+        id_user: currentUser.id,
+        lokasi_setor: lokasiSetor,
+      });
+      showToast(t("toast_dropoff_saved"));
+      closeModal();
+      loadAdminItems();
+      loadItems();
+    } catch (err) {
+      showToast(err.message, true);
+    }
+  });
 }
 
 async function adminDeleteItem(itemId) {
@@ -2034,6 +2227,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         formTipeSegmented.querySelectorAll(".seg-btn").forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         $("#report-tipe").value = btn.dataset.val;
+        const pagePhotoLbl = $("#report-photo-label");
+        if (pagePhotoLbl) {
+          pagePhotoLbl.textContent =
+            btn.dataset.val === "found"
+              ? t("report_photo_required_label")
+              : t("report_photo_optional_label");
+        }
       });
     });
   }
@@ -2073,8 +2273,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (reportForm) {
     reportForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+      const tipeVal = $("#report-tipe").value;
+      const fotoVal = $("#report-url-foto").value;
+      if (tipeVal === "found" && !fotoVal) {
+        showToast(t("toast_photo_required_found"), true);
+        return;
+      }
+
       const payload = {
-        tipe: $("#report-tipe").value,
+        tipe: tipeVal,
         judul: $("#report-judul").value.trim(),
         kategori: $("#report-kategori").value,
         tanggal: $("#report-tanggal").value,
@@ -2086,9 +2293,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       try {
         await api.createItem(payload);
-        showToast(t("toast_published"));
+        showToast(
+          tipeVal === "found" ? t("toast_published_found") : t("toast_published")
+        );
         reportForm.reset();
         if (btnRemovePhoto) btnRemovePhoto.click();
+        refreshActivityNotifications();
         window.location.hash = "beranda";
       } catch (err) {
         showToast(err.message, true);

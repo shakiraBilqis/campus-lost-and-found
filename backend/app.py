@@ -46,6 +46,7 @@ ALLOWED_DOMAINS = [
     "telkomuniversity.ac.id",
 ]
 ADMIN_EMAIL = "admin.lostfound@telkomuniversity.ac.id"
+CENTRAL_SECURITY_POST = "Pusat Pos Satpam Telkom University (Gerbang Utama)"
 
 
 # ---------------------------------------------------------------- helper & utilitas
@@ -502,6 +503,9 @@ def create_item():
     norm_tipe = "lost" if tipe in ("lost", "hilang") else "found"
     saved_photo = save_uploaded_photo(body.get("url_foto", ""))
 
+    if norm_tipe == "found" and not saved_photo:
+        return error("Laporan barang ditemukan wajib menyertakan foto", 400)
+
     item = {
         "id": next_id(data.items),
         "judul": judul,
@@ -515,6 +519,7 @@ def create_item():
         "status": "open",  # Laporan baru langsung open (Tersedia)
         "url_foto": saved_photo,
         "id_pelapor": pelapor["id"],
+        "lokasi_setor": CENTRAL_SECURITY_POST if norm_tipe == "found" else "",
     }
     data.items.append(item)
     return jsonify(item_with_relations(item)), 201
@@ -556,6 +561,9 @@ def update_item(item_id):
         and body["status"] in ("open", "claimed", "returned")
     ):
         item["status"] = body["status"]
+
+    if "lokasi_setor" in body and actor.get("role") == "admin":
+        item["lokasi_setor"] = str(body["lokasi_setor"]).strip()
 
     return jsonify(item_with_relations(item)), 200
 
@@ -722,9 +730,7 @@ def update_or_verify_claim(claim_id):
         item = find(data.items, claim["id_barang"])
 
         if new_status == "approved":
-            lokasi_ambil = str(body.get("lokasi_ambil", "")).strip()
-            if lokasi_ambil:
-                claim["lokasi_ambil"] = lokasi_ambil
+            claim["lokasi_ambil"] = str(body.get("lokasi_ambil", "")).strip() or CENTRAL_SECURITY_POST
             # Barang menjadi returned
             if item:
                 item["status"] = "returned"

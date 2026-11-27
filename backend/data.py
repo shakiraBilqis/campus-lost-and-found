@@ -54,6 +54,7 @@ items = [
         "status": "claimed",  # open, claimed, returned
         "url_foto": "img/charger.jpg",
         "id_pelapor": 4,  # Rizky
+        "lokasi_setor": "Pusat Pos Satpam Telkom University (Gerbang Utama)",
     },
     {
         "id": 2,
@@ -66,6 +67,7 @@ items = [
         "status": "open",
         "url_foto": "img/dompet.jpg",
         "id_pelapor": 2,  # Budi
+        "lokasi_setor": "",
     },
     {
         "id": 3,
@@ -78,6 +80,7 @@ items = [
         "status": "open",
         "url_foto": "img/ktm.jpg",
         "id_pelapor": 3,  # Siti
+        "lokasi_setor": "Pusat Pos Satpam Telkom University (Gerbang Utama)",
     },
     {
         "id": 4,
@@ -90,6 +93,7 @@ items = [
         "status": "returned",
         "url_foto": "img/botol.jpg",
         "id_pelapor": 2,  # Budi
+        "lokasi_setor": "Pusat Pos Satpam Telkom University (Gerbang Utama)",
     },
 ]
 
@@ -115,7 +119,7 @@ claims = [
         "tanggal_klaim": "2026-11-19",
         "tanggal_ambil": "2026-11-20",
         "jam_ambil": "10:00",
-        "lokasi_ambil": "Pos Satpam Gerbang Utama",
+        "lokasi_ambil": "Pusat Pos Satpam Telkom University (Gerbang Utama)",
         "bukti_file": "",
     },
 ]

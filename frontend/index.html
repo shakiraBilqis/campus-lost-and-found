@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=3">
+  <link rel="stylesheet" href="css/style.css?v=6">
   <script>
     (function () {
       var saved = localStorage.getItem("lf_theme");
@@ -234,7 +234,7 @@
             </div>
 
             <div class="form-group">
-              <label data-i18n="report_photo_label">Foto barang (opsional)</label>
+              <label id="report-photo-label" data-i18n="report_photo_required_label">Foto barang * (wajib untuk barang ditemukan)</label>
               <div class="photo-upload-area">
                 <input type="file" id="report-photo-input" accept="image/*">
                 <div class="photo-hint" data-i18n="report_photo_hint">Ukuran otomatis dioptimalkan (maks. 800px JPEG) sebelum dikirim.</div>
@@ -318,8 +318,8 @@
     </main>
   </div>
 
-  <script src="js/config.js?v=3"></script>
-  <script src="js/api.js?v=3"></script>
-  <script src="js/app.js?v=3"></script>
+  <script src="js/config.js?v=6"></script>
+  <script src="js/api.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>

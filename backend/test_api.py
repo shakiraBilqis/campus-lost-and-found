@@ -38,13 +38,25 @@ class TestLostAndFoundAPI(unittest.TestCase):
         items = json.loads(res.data)
         self.assertGreaterEqual(len(items), 4)
 
-        # Create item
-        new_item_payload = {
+        # Create found item without photo -> should fail (400)
+        bad_found_payload = {
             "judul": "Payung Hitam",
             "kategori": "Lainnya",
             "lokasi": "Gedung Kuliah Bersama",
             "tanggal": "2026-11-25",
             "tipe": "found",
+            "id_pelapor": 2
+        }
+        res_bad = self.client.post('/api/items', json=bad_found_payload, headers={'X-User-Id': '2'})
+        self.assertEqual(res_bad.status_code, 400)
+
+        # Create lost item without photo -> allowed (201)
+        new_item_payload = {
+            "judul": "Payung Hitam",
+            "kategori": "Lainnya",
+            "lokasi": "Gedung Kuliah Bersama",
+            "tanggal": "2026-11-25",
+            "tipe": "lost",
             "id_pelapor": 2
         }
         res_create = self.client.post('/api/items', json=new_item_payload, headers={'X-User-Id': '2'})
